@@ -38,7 +38,7 @@ test.describe('player rosters', () => {
     await page.getByTestId('roster-continue-to-game').click()
 
     await expect(page.getByTestId('game-roster-panel')).toContainText(rosterName)
-    await expect(page.getByTestId('bench-list')).toContainText('Jordan')
+    await expect(page.getByTestId('on-field-list')).toContainText('Jordan')
 
     await page.reload()
     await page.getByRole('button', { name: /get started/i }).click()
@@ -62,6 +62,6 @@ test.describe('player rosters', () => {
       .click()
 
     await expect(page.getByTestId('game-roster-panel')).toContainText(rosterName)
-    await expect(page.getByTestId('bench-list')).toContainText('Jordan')
+    await expect(page.getByTestId('on-field-list')).toContainText('Jordan')
   })
 })
