@@ -63,6 +63,8 @@ export default function App() {
         ? timerConfigToRawForm(setupIntent.gameType.config)
         : undefined
     const initialName = setupIntent.kind === 'edit' ? setupIntent.gameType.name : ''
+    const initialOnFieldCount =
+      setupIntent.kind === 'edit' ? setupIntent.gameType.onFieldCount : undefined
 
     return (
       <main className="welcome">
@@ -78,6 +80,7 @@ export default function App() {
             editingId={editingId}
             initialRaw={initialRaw}
             initialName={initialName}
+            initialOnFieldCount={initialOnFieldCount}
             onSaved={goToLoadSaved}
             onCancel={showSetupBack ? goToLoadSaved : undefined}
           />
