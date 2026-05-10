@@ -8,13 +8,13 @@ import {
 export type LoadSavedGameTypesProps = {
   onCreateNew: () => void
   onEdit: (gameType: GameTypeRecord) => void
-  onLoad: (gameType: GameTypeRecord) => void
+  onStartGame: (gameType: GameTypeRecord) => void
 }
 
 export default function LoadSavedGameTypes({
   onCreateNew,
   onEdit,
-  onLoad,
+  onStartGame,
 }: LoadSavedGameTypesProps) {
   const [items, setItems] = useState<GameTypeRecord[]>(() => getGameTypes())
 
@@ -53,8 +53,12 @@ export default function LoadSavedGameTypes({
               <div className="game-types-item-main">
                 <span className="game-types-item-name">{gt.name}</span>
                 <div className="game-types-item-actions">
-                  <button type="button" className="btn-text" onClick={() => onLoad(gt)}>
-                    Load
+                  <button
+                    type="button"
+                    className="btn-text"
+                    onClick={() => onStartGame(gt)}
+                  >
+                    Start game
                   </button>
                   <button type="button" className="btn-text" onClick={() => onEdit(gt)}>
                     Edit

@@ -1,20 +1,21 @@
 import { useState } from 'react'
 import LoadSavedGameTypes from './timer/LoadSavedGameTypes'
+import GameScreen from './timer/GameScreen'
 import TimerConfigForm from './timer/TimerConfigForm'
 import { writeJson } from './storage/appStorage'
 import { getGameTypes, type GameTypeRecord } from './storage/gameTypesStorage'
 import { timerConfigToRawForm } from './timer/timerConfig'
 
-type Phase = 'welcome' | 'loadSaved' | 'setup'
+type Phase = 'welcome' | 'loadSaved' | 'setup' | 'game'
 
 type SetupIntent =
   | { kind: 'create'; fromLoadSaved: boolean }
   | { kind: 'edit'; gameType: GameTypeRecord }
-  | { kind: 'template'; template: GameTypeRecord }
 
 export default function App() {
   const [phase, setPhase] = useState<Phase>('welcome')
   const [setupIntent, setSetupIntent] = useState<SetupIntent | null>(null)
+  const [activeGameType, setActiveGameType] = useState<GameTypeRecord | null>(null)
 
   function handleGetStarted() {
     writeJson('onboarding', { startedAt: Date.now() })
@@ -41,9 +42,14 @@ export default function App() {
     setPhase('setup')
   }
 
-  function openTemplate(gameType: GameTypeRecord) {
-    setSetupIntent({ kind: 'template', template: gameType })
-    setPhase('setup')
+  function openGame(gameType: GameTypeRecord) {
+    setActiveGameType(gameType)
+    setPhase('game')
+  }
+
+  function leaveGame() {
+    setActiveGameType(null)
+    setPhase('loadSaved')
   }
 
   const showSetupBack =
@@ -55,15 +61,8 @@ export default function App() {
     const initialRaw =
       setupIntent.kind === 'edit'
         ? timerConfigToRawForm(setupIntent.gameType.config)
-        : setupIntent.kind === 'template'
-          ? timerConfigToRawForm(setupIntent.template.config)
-          : undefined
-    const initialName =
-      setupIntent.kind === 'edit'
-        ? setupIntent.gameType.name
-        : setupIntent.kind === 'template'
-          ? ''
-          : ''
+        : undefined
+    const initialName = setupIntent.kind === 'edit' ? setupIntent.gameType.name : ''
 
     return (
       <main className="welcome">
@@ -72,11 +71,9 @@ export default function App() {
             key={
               setupIntent.kind === 'edit'
                 ? `edit-${setupIntent.gameType.id}`
-                : setupIntent.kind === 'template'
-                  ? `tpl-${setupIntent.template.id}`
-                  : setupIntent.fromLoadSaved
-                    ? 'create-from-list'
-                    : 'create-first'
+                : setupIntent.fromLoadSaved
+                  ? 'create-from-list'
+                  : 'create-first'
             }
             editingId={editingId}
             initialRaw={initialRaw}
@@ -89,6 +86,12 @@ export default function App() {
     )
   }
 
+  if (phase === 'game' && activeGameType) {
+    return (
+      <GameScreen gameType={activeGameType} onLeave={leaveGame} />
+    )
+  }
+
   if (phase === 'loadSaved') {
     return (
       <main className="welcome">
@@ -96,7 +99,7 @@ export default function App() {
           <LoadSavedGameTypes
             onCreateNew={openCreateNew}
             onEdit={openEdit}
-            onLoad={openTemplate}
+            onStartGame={openGame}
           />
         </div>
       </main>
