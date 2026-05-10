@@ -36,6 +36,14 @@ jobs:
       - name: Production build
         run: npm run build
 
+      # Fail fast if Pages would serve dev index.html (e.g. branch deploy of repo root).
+      - name: Verify bundle replaces dev entry
+        run: |
+          if grep -q '/src/main.tsx' dist/index.html || grep -q '/src/main.ts' dist/index.html; then
+            echo 'dist/index.html still references /src/main — vite build did not transform entry.'
+            exit 1
+          fi
+
       - name: Install Playwright Chromium (system deps)
         run: npx playwright install --with-deps chromium
 
