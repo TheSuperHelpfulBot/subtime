@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getGameTypes } from '../storage/gameTypesStorage'
 import TimerConfigForm from './TimerConfigForm'
 
 describe('TimerConfigForm', () => {
@@ -8,8 +9,12 @@ describe('TimerConfigForm', () => {
     localStorage.clear()
   })
 
-  it('shows defaults and a valid summary', () => {
+  it('shows defaults with game type name first and a valid summary', () => {
     render(<TimerConfigForm />)
+
+    const fields = screen.getAllByRole('textbox')
+    expect(fields[0]).toHaveAccessibleName(/game type name/i)
+
     expect(screen.getByLabelText(/number of periods/i)).toHaveValue(4)
     expect(screen.getByLabelText(/period length/i)).toHaveValue('12')
     expect(screen.getByLabelText(/break length/i)).toHaveValue('2')
@@ -37,14 +42,16 @@ describe('TimerConfigForm', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/at least one period/i)
   })
 
-  it('saves a game type and lists it', async () => {
+  it('persists a game type when Save is clicked', async () => {
     const user = userEvent.setup()
-    render(<TimerConfigForm />)
+    const onSaved = vi.fn()
+    render(<TimerConfigForm onSaved={onSaved} />)
 
     await user.type(screen.getByLabelText(/game type name/i), 'Club match')
     await user.click(screen.getByRole('button', { name: /save game type/i }))
 
-    expect(screen.getByTestId('saved-game-types')).toHaveTextContent('Club match')
+    expect(getGameTypes().some((g) => g.name === 'Club match')).toBe(true)
+    expect(onSaved).toHaveBeenCalled()
   })
 
   it('shows duplicate name message when saving twice', async () => {
@@ -58,40 +65,5 @@ describe('TimerConfigForm', () => {
     await user.click(screen.getByRole('button', { name: /save game type/i }))
 
     expect(screen.getByRole('alert')).toHaveTextContent(/already exists/i)
-  })
-
-  it('removes a saved game type when Delete is clicked', async () => {
-    const user = userEvent.setup()
-    render(<TimerConfigForm />)
-
-    await user.type(screen.getByLabelText(/game type name/i), 'Temp')
-    await user.click(screen.getByRole('button', { name: /save game type/i }))
-    await user.click(screen.getByRole('button', { name: /^delete$/i }))
-
-    expect(screen.getByTestId('saved-game-types-empty')).toBeInTheDocument()
-  })
-
-  it('loads a saved game type into the form', async () => {
-    const user = userEvent.setup()
-    render(<TimerConfigForm />)
-
-    await user.clear(screen.getByLabelText(/number of periods/i))
-    await user.type(screen.getByLabelText(/number of periods/i), '3')
-    await user.clear(screen.getByLabelText(/period length/i))
-    await user.type(screen.getByLabelText(/period length/i), '15')
-    await user.clear(screen.getByLabelText(/break length/i))
-    await user.type(screen.getByLabelText(/break length/i), '5')
-
-    await user.type(screen.getByLabelText(/game type name/i), 'Fifteen')
-    await user.click(screen.getByRole('button', { name: /save game type/i }))
-
-    await user.clear(screen.getByLabelText(/number of periods/i))
-    await user.type(screen.getByLabelText(/number of periods/i), '1')
-
-    await user.click(screen.getByRole('button', { name: /^load$/i }))
-
-    expect(screen.getByLabelText(/number of periods/i)).toHaveValue(3)
-    expect(screen.getByLabelText(/period length/i)).toHaveValue('15')
-    expect(screen.getByLabelText(/break length/i)).toHaveValue('5')
   })
 })

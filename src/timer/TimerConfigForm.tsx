@@ -7,8 +7,6 @@ import {
   type RawTimerForm,
   formatMinutesForDisplay,
   parseAndValidateTimerForm,
-  timerConfigToRawForm,
-  type TimerConfig,
 } from './timerConfig'
 
 const DEFAULT_RAW: RawTimerForm = {
@@ -191,6 +189,12 @@ export default function TimerConfigForm({
         </button>
       </div>
 
+      {formMessage ? (
+        <p className="field-error game-types-message" role="alert">
+          {formMessage}
+        </p>
+      ) : null}
+
       {onCancel ? (
         <div className="setup-cancel-wrap">
           <button type="button" className="btn-text setup-back" onClick={onCancel}>
@@ -198,17 +202,6 @@ export default function TimerConfigForm({
           </button>
         </div>
       ) : null}
-
-      {formMessage ? (
-        <p className="field-error game-types-message" role="alert">
-          {formMessage}
-        </p>
-      ) : null}
     </form>
   )
-}
-
-/** Helper for parents that open the form from a saved template (Load). */
-export function rawFormFromTimerConfig(config: TimerConfig): RawTimerForm {
-  return timerConfigToRawForm(config)
 }

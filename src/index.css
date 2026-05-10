@@ -282,3 +282,38 @@ h1 {
   color: #94a3b8;
   text-align: center;
 }
+
+.load-saved {
+  width: 100%;
+}
+
+.load-saved-title {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.35rem, 4vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.load-saved-create {
+  width: 100%;
+  margin: 0 0 1.25rem;
+  border-radius: 0.65rem;
+}
+
+.load-saved-list {
+  margin-top: 0.25rem;
+}
+
+.setup-save-actions {
+  margin-top: 1rem;
+}
+
+.setup-cancel-wrap {
+  margin-top: 0.85rem;
+  text-align: center;
+}
+
+.setup-back {
+  font-size: 0.875rem;
+}
