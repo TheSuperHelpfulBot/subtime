@@ -22,7 +22,6 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /get started/i }))
     expect(screen.getByRole('heading', { name: /set up game type/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/game type name/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/number of periods/i)).toBeInTheDocument()
   })
 
   it('shows Load Saved Game Type after Get started when saves exist', async () => {

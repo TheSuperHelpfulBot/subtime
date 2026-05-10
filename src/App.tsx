@@ -1,12 +1,16 @@
 import { useState } from 'react'
-import LoadSavedGameTypes from './timer/LoadSavedGameTypes'
+import LoadSavedRosters from './roster/LoadSavedRosters'
+import SetUpRoster from './roster/SetUpRoster'
 import GameScreen from './timer/GameScreen'
+import LoadSavedGameTypes from './timer/LoadSavedGameTypes'
 import TimerConfigForm from './timer/TimerConfigForm'
 import { writeJson } from './storage/appStorage'
-import { getGameTypes, type GameTypeRecord } from './storage/gameTypesStorage'
+import type { GameTypeRecord } from './storage/gameTypesStorage'
+import { getGameTypes } from './storage/gameTypesStorage'
+import { getRosters } from './storage/rosterStorage'
 import { timerConfigToRawForm } from './timer/timerConfig'
 
-type Phase = 'welcome' | 'loadSaved' | 'setup' | 'game'
+type Phase = 'welcome' | 'loadSaved' | 'setup' | 'rosterPick' | 'rosterSetup' | 'game'
 
 type SetupIntent =
   | { kind: 'create'; fromLoadSaved: boolean }
@@ -15,10 +19,13 @@ type SetupIntent =
 export default function App() {
   const [phase, setPhase] = useState<Phase>('welcome')
   const [setupIntent, setSetupIntent] = useState<SetupIntent | null>(null)
+  const [pendingGameType, setPendingGameType] = useState<GameTypeRecord | null>(null)
   const [activeGameType, setActiveGameType] = useState<GameTypeRecord | null>(null)
+  const [activeRosterId, setActiveRosterId] = useState<string | null>(null)
 
   function handleGetStarted() {
     writeJson('onboarding', { startedAt: Date.now() })
+    setSetupIntent(null)
     if (getGameTypes().length === 0) {
       setSetupIntent({ kind: 'create', fromLoadSaved: false })
       setPhase('setup')
@@ -42,13 +49,30 @@ export default function App() {
     setPhase('setup')
   }
 
-  function openGame(gameType: GameTypeRecord) {
+  function startGameFromList(gameType: GameTypeRecord) {
+    setPendingGameType(gameType)
+    if (getRosters().length > 0) {
+      setPhase('rosterPick')
+    } else {
+      setPhase('rosterSetup')
+    }
+  }
+
+  function openGameWithRoster(gameType: GameTypeRecord, rosterId: string) {
     setActiveGameType(gameType)
+    setActiveRosterId(rosterId)
+    setPendingGameType(null)
     setPhase('game')
+  }
+
+  function backFromRosterFlow() {
+    setPendingGameType(null)
+    setPhase('loadSaved')
   }
 
   function leaveGame() {
     setActiveGameType(null)
+    setActiveRosterId(null)
     setPhase('loadSaved')
   }
 
@@ -89,9 +113,37 @@ export default function App() {
     )
   }
 
-  if (phase === 'game' && activeGameType) {
+  if (phase === 'game' && activeGameType && activeRosterId) {
     return (
-      <GameScreen gameType={activeGameType} onLeave={leaveGame} />
+      <GameScreen gameType={activeGameType} rosterId={activeRosterId} onLeave={leaveGame} />
+    )
+  }
+
+  if (phase === 'rosterPick' && pendingGameType) {
+    return (
+      <main className="welcome">
+        <div className="welcome-inner timer-layout">
+          <LoadSavedRosters
+            gameType={pendingGameType}
+            onBack={backFromRosterFlow}
+            onChooseRoster={(rosterId) => openGameWithRoster(pendingGameType, rosterId)}
+          />
+        </div>
+      </main>
+    )
+  }
+
+  if (phase === 'rosterSetup' && pendingGameType) {
+    return (
+      <main className="welcome">
+        <div className="welcome-inner timer-layout">
+          <SetUpRoster
+            gameType={pendingGameType}
+            onBack={backFromRosterFlow}
+            onComplete={(rosterId) => openGameWithRoster(pendingGameType, rosterId)}
+          />
+        </div>
+      </main>
     )
   }
 
@@ -102,7 +154,7 @@ export default function App() {
           <LoadSavedGameTypes
             onCreateNew={openCreateNew}
             onEdit={openEdit}
-            onStartGame={openGame}
+            onStartGame={startGameFromList}
           />
         </div>
       </main>

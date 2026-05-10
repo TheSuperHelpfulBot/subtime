@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { getRosterById, type PlayerRecord } from '../storage/rosterStorage'
 import type { GameTypeRecord } from '../storage/gameTypesStorage'
 import {
   createIdleState,
@@ -15,16 +16,62 @@ import {
 
 export type GameScreenProps = {
   gameType: GameTypeRecord
+  rosterId: string
   onLeave: () => void
 }
 
 const MAX_TICK_SECONDS = 1
 
-export default function GameScreen({ gameType, onLeave }: GameScreenProps) {
+function playerLabel(p: PlayerRecord): string {
+  const name = p.name.trim()
+  const num = p.shirtNumber.trim()
+  if (name && num) return `${name} · #${num}`
+  if (name) return name
+  if (num) return `#${num}`
+  return 'Player'
+}
+
+export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenProps) {
   const [state, setState] = useState<GameTimerState>(() =>
     createIdleState(gameType.config),
   )
   const lastTickRef = useRef<number | null>(null)
+
+  const roster = useMemo(() => getRosterById(rosterId), [rosterId])
+
+  const [benchIds, setBenchIds] = useState<string[]>(() =>
+    getRosterById(rosterId)?.players.map((p) => p.id) ?? [],
+  )
+  const [fieldIds, setFieldIds] = useState<string[]>([])
+
+  useEffect(() => {
+    const r = getRosterById(rosterId)
+    if (r) {
+      setBenchIds(r.players.map((p) => p.id))
+      setFieldIds([])
+    } else {
+      setBenchIds([])
+      setFieldIds([])
+    }
+  }, [gameType.id, rosterId])
+
+  const playerById = useMemo(() => {
+    const map = new Map<string, PlayerRecord>()
+    roster?.players.forEach((p) => map.set(p.id, p))
+    return map
+  }, [roster])
+
+  function moveToField(playerId: string) {
+    if (!roster) return
+    if (fieldIds.length >= gameType.onFieldCount) return
+    setBenchIds((b) => b.filter((id) => id !== playerId))
+    setFieldIds((f) => [...f, playerId])
+  }
+
+  function moveToBench(playerId: string) {
+    setFieldIds((f) => f.filter((id) => id !== playerId))
+    setBenchIds((b) => [...b, playerId])
+  }
 
   useEffect(() => {
     if (state.runStatus !== 'running') {
@@ -158,16 +205,74 @@ export default function GameScreen({ gameType, onLeave }: GameScreenProps) {
         </div>
       </div>
 
-      <div
-        className="game-screen-roster-placeholder"
-        data-testid="roster-placeholder"
-        aria-hidden
-      >
-        <p className="game-screen-roster-title">Roster</p>
-        <p className="game-screen-roster-copy">
-          Player roster and substitutions will appear here in a future milestone.
-        </p>
-      </div>
+      {roster ? (
+        <div className="game-roster-panel" data-testid="game-roster-panel">
+          <p className="game-screen-roster-title">{roster.name}</p>
+          <div className="game-roster-columns">
+            <div className="game-roster-column" data-testid="bench-list">
+              <p className="game-roster-column-title">Bench</p>
+              <ul className="game-roster-ul" aria-label="Bench">
+                {benchIds.map((id) => {
+                  const p = playerById.get(id)
+                  if (!p) return null
+                  const full = fieldIds.length >= gameType.onFieldCount
+                  return (
+                    <li key={id} className="game-roster-li">
+                      <span className="game-roster-player-text">{playerLabel(p)}</span>
+                      <button
+                        type="button"
+                        className="btn-text game-roster-move"
+                        disabled={full}
+                        onClick={() => moveToField(id)}
+                      >
+                        To field
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+              {benchIds.length === 0 ? (
+                <p className="game-roster-empty-col">Nobody on the bench.</p>
+              ) : null}
+            </div>
+            <div className="game-roster-column" data-testid="on-field-list">
+              <p className="game-roster-column-title">On field</p>
+              <ul className="game-roster-ul" aria-label="On field">
+                {fieldIds.map((id) => {
+                  const p = playerById.get(id)
+                  if (!p) return null
+                  return (
+                    <li key={id} className="game-roster-li">
+                      <span className="game-roster-player-text">{playerLabel(p)}</span>
+                      <button
+                        type="button"
+                        className="btn-text game-roster-move"
+                        onClick={() => moveToBench(id)}
+                      >
+                        To bench
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+              {fieldIds.length === 0 ? (
+                <p className="game-roster-empty-col">Nobody on field yet.</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="game-screen-roster-placeholder"
+          data-testid="roster-placeholder"
+          aria-hidden
+        >
+          <p className="game-screen-roster-title">Roster</p>
+          <p className="game-screen-roster-copy">
+            This roster could not be loaded. Go back and choose a roster again.
+          </p>
+        </div>
+      )}
     </main>
   )
 }
