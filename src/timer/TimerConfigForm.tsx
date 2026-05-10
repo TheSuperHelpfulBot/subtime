@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
+  DEFAULT_ON_FIELD_COUNT,
   saveGameType,
   updateGameType,
 } from '../storage/gameTypesStorage'
@@ -21,6 +22,8 @@ export type TimerConfigFormProps = {
   /** Seed timer fields (and optionally name via initialName). */
   initialRaw?: RawTimerForm
   initialName?: string
+  /** Seed players-on-field when editing a saved game type. */
+  initialOnFieldCount?: number
   onSaved?: () => void
   onCancel?: () => void
 }
@@ -29,14 +32,24 @@ export default function TimerConfigForm({
   editingId = null,
   initialRaw,
   initialName = '',
+  initialOnFieldCount,
   onSaved,
   onCancel,
 }: TimerConfigFormProps) {
   const [raw, setRaw] = useState<RawTimerForm>(initialRaw ?? DEFAULT_RAW)
   const [gameTypeName, setGameTypeName] = useState(initialName)
+  const [onFieldCountRaw, setOnFieldCountRaw] = useState(() =>
+    initialOnFieldCount != null ? String(initialOnFieldCount) : String(DEFAULT_ON_FIELD_COUNT),
+  )
   const [formMessage, setFormMessage] = useState<string | null>(null)
 
   const { valid, config, errors } = useMemo(() => parseAndValidateTimerForm(raw), [raw])
+
+  const onFieldCountParsed = useMemo(() => {
+    const n = Number.parseInt(onFieldCountRaw.trim(), 10)
+    if (!Number.isInteger(n) || n < 1) return { ok: false as const }
+    return { ok: true as const, value: n }
+  }, [onFieldCountRaw])
 
   function update<K extends keyof RawTimerForm>(key: K, value: string) {
     setRaw((prev) => ({ ...prev, [key]: value }))
@@ -45,24 +58,33 @@ export default function TimerConfigForm({
   function handleSaveGameType() {
     setFormMessage(null)
     if (!valid || !config) return
+    if (!onFieldCountParsed.ok) {
+      setFormMessage('Enter a whole number of players on field (at least 1).')
+      return
+    }
+    const playersOnField = onFieldCountParsed.value
 
     if (editingId) {
-      const result = updateGameType(editingId, gameTypeName, config)
+      const result = updateGameType(editingId, gameTypeName, config, playersOnField)
       if (!result.ok) {
         if (result.error === 'duplicate_name') {
           setFormMessage('Another game type already uses that name.')
         } else if (result.error === 'empty_name') {
           setFormMessage('Enter a name for this game type.')
+        } else if (result.error === 'invalid_on_field_count') {
+          setFormMessage('Players on field must be at least 1.')
         } else {
           setFormMessage('Could not save changes.')
         }
         return
       }
     } else {
-      const result = saveGameType(gameTypeName, config)
+      const result = saveGameType(gameTypeName, config, playersOnField)
       if (!result.ok) {
         if (result.error === 'duplicate_name') {
           setFormMessage('A game type with that name already exists.')
+        } else if (result.error === 'invalid_on_field_count') {
+          setFormMessage('Players on field must be at least 1.')
         } else {
           setFormMessage('Enter a name for this game type.')
         }
@@ -74,7 +96,8 @@ export default function TimerConfigForm({
     onSaved?.()
   }
 
-  const saveDisabled = !valid || !config || gameTypeName.trim() === ''
+  const saveDisabled =
+    !valid || !config || !onFieldCountParsed.ok || gameTypeName.trim() === ''
 
   return (
     <form className="timer-config" noValidate onSubmit={(e) => e.preventDefault()}>
@@ -94,6 +117,31 @@ export default function TimerConfigForm({
           value={gameTypeName}
           onChange={(e) => setGameTypeName(e.target.value)}
         />
+      </div>
+
+      <div className="field">
+        <label htmlFor="game-type-on-field">Players on field</label>
+        <input
+          id="game-type-on-field"
+          name="onFieldCount"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          step={1}
+          value={onFieldCountRaw}
+          onChange={(e) => setOnFieldCountRaw(e.target.value)}
+          aria-invalid={!onFieldCountParsed.ok && onFieldCountRaw.trim() !== '' ? true : undefined}
+          aria-describedby={
+            !onFieldCountParsed.ok && onFieldCountRaw.trim() !== ''
+              ? 'game-type-on-field-error'
+              : undefined
+          }
+        />
+        {!onFieldCountParsed.ok && onFieldCountRaw.trim() !== '' ? (
+          <p id="game-type-on-field-error" className="field-error" role="alert">
+            Enter a whole number of at least 1.
+          </p>
+        ) : null}
       </div>
 
       <div className="field">

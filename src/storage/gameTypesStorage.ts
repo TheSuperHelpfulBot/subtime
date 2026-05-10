@@ -3,15 +3,24 @@ import { readJson, writeJson } from './appStorage'
 
 const KEY = 'gameTypes'
 
+/** Used when migrating legacy saves that omit this field, and as the default for new saves when unspecified. */
+export const DEFAULT_ON_FIELD_COUNT = 11
+
 export type GameTypeRecord = {
   id: string
   name: string
+  /** Maximum players on the field or court at once (e.g. 5-a-side → 5). */
+  onFieldCount: number
   config: TimerConfig
 }
 
 type Persisted = { items: GameTypeRecord[] }
 
-export type SaveGameTypeError = 'empty_name' | 'duplicate_name' | 'not_found'
+export type SaveGameTypeError =
+  | 'empty_name'
+  | 'duplicate_name'
+  | 'not_found'
+  | 'invalid_on_field_count'
 
 export type SaveGameTypeResult =
   | { ok: true; gameType: GameTypeRecord }
@@ -32,10 +41,24 @@ function namesConflict(a: string, b: string): boolean {
   return normalizeName(a).toLowerCase() === normalizeName(b).toLowerCase()
 }
 
+function isValidOnFieldCount(n: unknown): n is number {
+  return typeof n === 'number' && Number.isInteger(n) && n >= 1
+}
+
+function coerceOnFieldCount(raw: unknown): number {
+  return isValidOnFieldCount(raw) ? raw : DEFAULT_ON_FIELD_COUNT
+}
+
 function loadItems(): GameTypeRecord[] {
   const data = readJson<Persisted | null>(KEY, null)
   if (!data || !Array.isArray(data.items)) return []
-  return data.items
+  return data.items.map((item) => {
+    const row = item as GameTypeRecord
+    return {
+      ...row,
+      onFieldCount: coerceOnFieldCount(row.onFieldCount),
+    }
+  })
 }
 
 function persist(items: GameTypeRecord[]): void {
@@ -46,10 +69,17 @@ export function getGameTypes(): GameTypeRecord[] {
   return loadItems()
 }
 
-export function saveGameType(name: string, config: TimerConfig): SaveGameTypeResult {
+export function saveGameType(
+  name: string,
+  config: TimerConfig,
+  onFieldCount: number = DEFAULT_ON_FIELD_COUNT,
+): SaveGameTypeResult {
   const n = normalizeName(name)
   if (n === '') {
     return { ok: false, error: 'empty_name' }
+  }
+  if (!isValidOnFieldCount(onFieldCount)) {
+    return { ok: false, error: 'invalid_on_field_count' }
   }
   const items = loadItems()
   if (items.some((g) => namesConflict(g.name, n))) {
@@ -58,6 +88,7 @@ export function saveGameType(name: string, config: TimerConfig): SaveGameTypeRes
   const gameType: GameTypeRecord = {
     id: newId(),
     name: n,
+    onFieldCount,
     config: {
       periods: config.periods,
       periodDurationMinutes: config.periodDurationMinutes,
@@ -68,10 +99,18 @@ export function saveGameType(name: string, config: TimerConfig): SaveGameTypeRes
   return { ok: true, gameType }
 }
 
-export function updateGameType(id: string, name: string, config: TimerConfig): SaveGameTypeResult {
+export function updateGameType(
+  id: string,
+  name: string,
+  config: TimerConfig,
+  onFieldCount: number = DEFAULT_ON_FIELD_COUNT,
+): SaveGameTypeResult {
   const n = normalizeName(name)
   if (n === '') {
     return { ok: false, error: 'empty_name' }
+  }
+  if (!isValidOnFieldCount(onFieldCount)) {
+    return { ok: false, error: 'invalid_on_field_count' }
   }
   const items = loadItems()
   if (!items.some((g) => g.id === id)) {
@@ -85,6 +124,7 @@ export function updateGameType(id: string, name: string, config: TimerConfig): S
       ? {
           ...g,
           name: n,
+          onFieldCount,
           config: {
             periods: config.periods,
             periodDurationMinutes: config.periodDurationMinutes,
