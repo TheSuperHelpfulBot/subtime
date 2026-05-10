@@ -18,8 +18,15 @@ test.describe('game timer', () => {
     await expect(page.getByRole('heading', { name: /load saved game type/i })).toBeVisible()
     await page.getByRole('button', { name: /^start game$/i }).click()
 
+    await expect(page.getByTestId('set-up-roster-screen')).toBeVisible()
+    await page.getByTestId('roster-name-input').fill(`Roster ${uniqueName}`)
+    await page.getByTestId('roster-save').click()
+
+    await expect(page.getByTestId('roster-editor')).toBeVisible()
+    await page.getByTestId('roster-continue-to-game').click()
+
     await expect(page.getByTestId('game-screen')).toBeVisible()
-    await expect(page.getByTestId('roster-placeholder')).toBeVisible()
+    await expect(page.getByTestId('game-roster-panel')).toBeVisible()
     await expect(page.getByTestId('timer-segment-label')).toHaveText(/ready/i)
 
     await page.getByTestId('timer-start').click()
