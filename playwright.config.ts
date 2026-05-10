@@ -19,10 +19,19 @@ export default defineConfig({
   projects: [
     {
       name: 'iphone',
+      testIgnore: '**/substitutions-column-drop.spec.ts',
       // Keep iPhone 12 viewport/UA; use Chromium so tests run after `playwright install` only (no WebKit).
       use: {
         ...devices['iPhone 12'],
         browserName: 'chromium',
+      },
+    },
+    {
+      name: 'chromium-desktop',
+      testMatch: '**/substitutions-column-drop.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 480, height: 900 },
       },
     },
   ],

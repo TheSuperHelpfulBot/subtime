@@ -12,6 +12,7 @@ test.describe('game timer', () => {
     await page.getByLabel(/number of periods/i).fill('2')
     await page.getByLabel(/period length/i).fill('0:20')
     await page.getByLabel(/break length/i).fill('0:05')
+    await page.getByLabel(/players on field/i).fill('1')
 
     await page.getByRole('button', { name: /save game type/i }).click()
 
@@ -23,6 +24,9 @@ test.describe('game timer', () => {
     await page.getByTestId('roster-save').click()
 
     await expect(page.getByTestId('roster-editor')).toBeVisible()
+    await page.getByTestId('player-name-input').fill('Starter')
+    await page.getByTestId('player-shirt-input').fill('7')
+    await page.getByTestId('add-player-submit').click()
     await page.getByTestId('roster-continue-to-game').click()
 
     await expect(page.getByTestId('game-screen')).toBeVisible()
