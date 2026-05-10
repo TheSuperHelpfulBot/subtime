@@ -317,3 +317,107 @@ h1 {
 .setup-back {
   font-size: 0.875rem;
 }
+
+.game-screen {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr 4fr;
+  width: 100%;
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 0 1.25rem 1.5rem;
+  box-sizing: border-box;
+}
+
+.game-screen-timer-zone {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: auto;
+  border-bottom: 1px solid #334155;
+  padding: 0.75rem 0 1rem;
+}
+
+.game-screen-timer-inner {
+  text-align: center;
+}
+
+.game-screen-eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+}
+
+.game-screen-segment {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.game-screen-clock {
+  margin: 0 0 0.75rem;
+  font-size: clamp(2.25rem, 8vw, 2.75rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.game-screen-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.game-screen-primary {
+  width: 100%;
+}
+
+.game-screen-skip-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.game-screen-skip-row .btn-secondary {
+  flex: 1 1 8rem;
+}
+
+.game-screen-leave {
+  margin-top: 0.25rem;
+  text-align: center;
+  width: 100%;
+}
+
+.game-screen-roster-placeholder {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem 0.5rem 1rem;
+  color: #94a3b8;
+  border: 1px dashed #334155;
+  border-radius: 0.75rem;
+  margin-top: 0.75rem;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.game-screen-roster-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.game-screen-roster-copy {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  max-width: 18rem;
+}

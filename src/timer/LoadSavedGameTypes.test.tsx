@@ -17,7 +17,11 @@ describe('LoadSavedGameTypes', () => {
 
   it('shows empty state when there are no saved types', () => {
     render(
-      <LoadSavedGameTypes onCreateNew={() => {}} onEdit={() => {}} onLoad={() => {}} />,
+      <LoadSavedGameTypes
+        onCreateNew={() => {}}
+        onEdit={() => {}}
+        onStartGame={() => {}}
+      />,
     )
     expect(screen.getByRole('heading', { name: /load saved game type/i })).toBeInTheDocument()
     expect(screen.getByTestId('saved-game-types-empty')).toBeInTheDocument()
@@ -29,13 +33,13 @@ describe('LoadSavedGameTypes', () => {
 
     const onCreateNew = vi.fn()
     const onEdit = vi.fn()
-    const onLoad = vi.fn()
+    const onStartGame = vi.fn()
 
     render(
       <LoadSavedGameTypes
         onCreateNew={onCreateNew}
         onEdit={onEdit}
-        onLoad={onLoad}
+        onStartGame={onStartGame}
       />,
     )
 
@@ -43,8 +47,8 @@ describe('LoadSavedGameTypes', () => {
     await user.click(screen.getByRole('button', { name: /^create new game type$/i }))
     expect(onCreateNew).toHaveBeenCalledTimes(1)
 
-    await user.click(screen.getByRole('button', { name: /^load$/i }))
-    expect(onLoad).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: /^start game$/i }))
+    expect(onStartGame).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole('button', { name: /^edit$/i }))
     expect(onEdit).toHaveBeenCalledTimes(1)
@@ -55,7 +59,11 @@ describe('LoadSavedGameTypes', () => {
     expect(saveGameType('Temp', sampleConfig).ok).toBe(true)
 
     render(
-      <LoadSavedGameTypes onCreateNew={() => {}} onEdit={() => {}} onLoad={() => {}} />,
+      <LoadSavedGameTypes
+        onCreateNew={() => {}}
+        onEdit={() => {}}
+        onStartGame={() => {}}
+      />,
     )
 
     await user.click(screen.getByRole('button', { name: /^delete$/i }))
