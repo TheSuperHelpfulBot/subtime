@@ -7,12 +7,17 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "preinstall": "node scripts/check-node-version.mjs",
+    "prebuild": "node scripts/check-node-version.mjs",
+    "pretest": "node scripts/check-node-version.mjs",
+    "predev": "node scripts/check-node-version.mjs",
     "dev": "vite",
     "build": "vite build",
+    "prepreview": "node scripts/check-node-version.mjs",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "pretest:e2e": "vite build",
+    "test:watch": "node scripts/check-node-version.mjs && vitest",
+    "pretest:e2e": "node scripts/check-node-version.mjs && vite build",
     "test:e2e": "playwright test",
     "test:e2e:ci": "playwright test"
   },
