@@ -103,7 +103,7 @@ export default function TimerConfigForm({
     <form className="timer-config" noValidate onSubmit={(e) => e.preventDefault()}>
       <h2 className="timer-config-title">Set Up Game Type</h2>
       <p className="timer-config-lead">
-        Name your setup, then set periods and timing for this match. You can change this later.
+        Name and set attributes for your game template. You can change this later.
       </p>
 
       <div className="field">
