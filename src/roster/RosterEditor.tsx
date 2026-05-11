@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   MAX_PLAYER_NAME_LENGTH,
   MAX_ROSTER_NAME_LENGTH,
@@ -122,6 +122,7 @@ export default function RosterEditor({
   const [playerShirt, setPlayerShirt] = useState('')
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null)
   const [formMessage, setFormMessage] = useState<string | null>(null)
+  const newPlayerNameInputRef = useRef<HTMLInputElement>(null)
 
   const roster = getRosterById(rosterId)
 
@@ -160,6 +161,9 @@ export default function RosterEditor({
     setPlayerShirt('')
     onChanged()
     refreshLocal()
+    queueMicrotask(() => {
+      newPlayerNameInputRef.current?.focus()
+    })
   }
 
   function handleDeleteRoster() {
@@ -206,11 +210,18 @@ export default function RosterEditor({
 
       <div className="roster-editor-players">
         <p className="roster-editor-section-label">Players</p>
-        <div className="roster-add-player">
+        <form
+          className="roster-add-player"
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleAddPlayer()
+          }}
+        >
           <div className="roster-add-fields-row">
             <div className="field">
               <label htmlFor="player-name-input">Name</label>
               <input
+                ref={newPlayerNameInputRef}
                 id="player-name-input"
                 data-testid="player-name-input"
                 type="text"
@@ -234,10 +245,10 @@ export default function RosterEditor({
               />
             </div>
           </div>
-          <button type="button" className="cta roster-add-player-btn" data-testid="add-player-submit" onClick={handleAddPlayer}>
+          <button type="submit" className="cta roster-add-player-btn" data-testid="add-player-submit">
             Add player
           </button>
-        </div>
+        </form>
 
         <ul className="roster-players-list" data-testid="roster-players-list" aria-label="Players in roster">
           {players.map((p) => (
