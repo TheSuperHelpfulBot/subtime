@@ -42,17 +42,18 @@ test.describe('substitutions · column chrome drop', () => {
     await expect(fieldCards).toHaveCount(2)
     await expect(benchCards).toHaveCount(0)
 
-    const benchGutter = page.getByTestId('bench-drop-gutter')
-    await benchGutter.waitFor({ state: 'visible' })
-    const gutterBox = await benchGutter.boundingBox()
-    expect(gutterBox).not.toBeNull()
-    expect(gutterBox!.height).toBeGreaterThan(32)
+    // Bench has two “chrome” areas: the `<ul>` (swap when there are bench players) and the
+    // empty hint + dashed gutter below (send to bench without swap). There is a parallel
+    // blank gutter under “On field”; missing the bench column gives the same “still 2 on
+    // field” outcome as a no-op drop. Target the empty-bench copy — it is unambiguously in
+    // the bench column and drops bubble to `bench-column-drop`’s handler.
+    const benchEmptyHint = page.getByText('Nobody on the bench. Drag players here.')
+    await benchEmptyHint.scrollIntoViewIfNeeded()
+    await expect(benchEmptyHint).toBeVisible()
 
-    await fieldCards.first().dragTo(benchGutter, {
-      targetPosition: {
-        x: Math.max(6, Math.floor(gutterBox!.width / 2)),
-        y: Math.max(6, Math.floor(gutterBox!.height - 8)),
-      },
+    await fieldCards.first().dragTo(benchEmptyHint, {
+      // Extra steps so the pointer path stays over the page long enough for Chromium’s DnD.
+      steps: 24,
     })
 
     await expect(fieldCards).toHaveCount(1)
