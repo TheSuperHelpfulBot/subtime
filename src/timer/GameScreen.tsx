@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { getRosterById, type PlayerRecord } from '../storage/rosterStorage'
 import type { GameTypeRecord } from '../storage/gameTypesStorage'
 import {
@@ -32,6 +39,17 @@ export type GameScreenProps = {
 }
 
 const MAX_TICK_SECONDS = 1
+const POINTER_DRAG_THRESHOLD_PX = 4
+
+type DropZone = 'bench' | 'field'
+
+type PointerDragSession = {
+  playerId: string
+  pointerId: number
+  startX: number
+  startY: number
+  hasMoved: boolean
+}
 
 function playerLabel(p: PlayerRecord): string {
   const name = p.name.trim()
@@ -40,6 +58,14 @@ function playerLabel(p: PlayerRecord): string {
   if (name) return name
   if (num) return `#${num}`
   return 'Player'
+}
+
+function closestHTMLElement(element: Element | null, selector: string): HTMLElement | null {
+  return element?.closest(selector) as HTMLElement | null
+}
+
+function isDropZone(value: string | undefined): value is DropZone {
+  return value === 'bench' || value === 'field'
 }
 
 export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenProps) {
@@ -70,6 +96,11 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
   })
   const fieldIdsRef = useRef(fieldIds)
   fieldIdsRef.current = fieldIds
+  const benchIdsRef = useRef(benchIds)
+  benchIdsRef.current = benchIds
+  const pointerDragRef = useRef<PointerDragSession | null>(null)
+  const cleanupPointerDragRef = useRef<(() => void) | null>(null)
+  const [pointerDraggingPlayerId, setPointerDraggingPlayerId] = useState<string | null>(null)
 
   const [playtime, setPlaytime] = useState<PlaytimeSeconds>(() =>
     createZeroPlaytime(getRosterById(rosterId)?.players.map((p) => p.id) ?? []),
@@ -167,6 +198,139 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
     if (fieldIds.includes(draggedId)) moveToEndOfField(draggedId)
   }
 
+  function clearPointerDrag() {
+    cleanupPointerDragRef.current?.()
+    cleanupPointerDragRef.current = null
+    pointerDragRef.current = null
+    setPointerDraggingPlayerId(null)
+  }
+
+  function applyPointerDrop(playerId: string, clientX: number, clientY: number) {
+    const element = document.elementFromPoint(clientX, clientY)
+    const playerCard = closestHTMLElement(element, '[data-game-player-card="true"]')
+    const targetPlayerId = playerCard?.dataset.playerId
+    const targetZone = playerCard?.dataset.playerZone
+
+    if (targetPlayerId && targetPlayerId !== playerId && isDropZone(targetZone)) {
+      if (targetZone === 'bench') {
+        if (fieldIdsRef.current.includes(playerId)) {
+          applyBenchToFieldDrop(playerId, targetPlayerId)
+          return
+        }
+        if (benchIdsRef.current.includes(playerId)) {
+          applySwapTwoBench(playerId, targetPlayerId)
+          return
+        }
+      }
+
+      if (targetZone === 'field') {
+        if (benchIdsRef.current.includes(playerId)) {
+          applyBenchToFieldDrop(targetPlayerId, playerId)
+          return
+        }
+        if (fieldIdsRef.current.includes(playerId)) {
+          applyFieldToFieldDrop(targetPlayerId, playerId)
+          return
+        }
+      }
+    }
+
+    const rosterZone = closestHTMLElement(element, '[data-game-roster-zone]')?.dataset
+      .gameRosterZone
+    if (!isDropZone(rosterZone)) return
+
+    if (rosterZone === 'bench') {
+      if (fieldIdsRef.current.includes(playerId)) {
+        setFieldIds((f) => f.filter((id) => id !== playerId))
+        setBenchIds((b) => [...b, playerId])
+        return
+      }
+      if (benchIdsRef.current.includes(playerId)) moveToEndOfBench(playerId)
+      return
+    }
+
+    if (benchIdsRef.current.includes(playerId)) {
+      if (fieldIdsRef.current.length < gameType.onFieldCount) {
+        setBenchIds((b) => b.filter((id) => id !== playerId))
+        setFieldIds((f) => [...f, playerId])
+      }
+      return
+    }
+    if (fieldIdsRef.current.includes(playerId)) moveToEndOfField(playerId)
+  }
+
+  function handlePlayerPointerDown(
+    e: ReactPointerEvent<HTMLLIElement>,
+    playerId: string,
+  ) {
+    if (!e.isPrimary || e.pointerType === 'mouse') return
+
+    e.preventDefault()
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // Some pointer sources cannot be captured, but document listeners still track the drag.
+    }
+    clearPointerDrag()
+
+    pointerDragRef.current = {
+      playerId,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      hasMoved: false,
+    }
+    setPointerDraggingPlayerId(playerId)
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const session = pointerDragRef.current
+      if (!session || event.pointerId !== session.pointerId) return
+
+      const dx = event.clientX - session.startX
+      const dy = event.clientY - session.startY
+      if (Math.hypot(dx, dy) >= POINTER_DRAG_THRESHOLD_PX) {
+        session.hasMoved = true
+      }
+      if (session.hasMoved) event.preventDefault()
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const session = pointerDragRef.current
+      if (!session || event.pointerId !== session.pointerId) return
+
+      event.preventDefault()
+      if (session.hasMoved) {
+        applyPointerDrop(session.playerId, event.clientX, event.clientY)
+      }
+      clearPointerDrag()
+    }
+
+    const handlePointerCancel = (event: PointerEvent) => {
+      const session = pointerDragRef.current
+      if (!session || event.pointerId !== session.pointerId) return
+      clearPointerDrag()
+    }
+
+    document.addEventListener('pointermove', handlePointerMove)
+    document.addEventListener('pointerup', handlePointerUp)
+    document.addEventListener('pointercancel', handlePointerCancel)
+    cleanupPointerDragRef.current = () => {
+      document.removeEventListener('pointermove', handlePointerMove)
+      document.removeEventListener('pointerup', handlePointerUp)
+      document.removeEventListener('pointercancel', handlePointerCancel)
+    }
+  }
+
+  function playerCardClassName(playerId: string) {
+    return [
+      'game-player-card',
+      'game-player-card-draggable',
+      pointerDraggingPlayerId === playerId ? 'game-player-card-pointer-dragging' : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+  }
+
   useEffect(() => {
     if (state.runStatus !== 'running') {
       lastTickRef.current = null
@@ -198,6 +362,15 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
     frame = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(frame)
   }, [state.runStatus])
+
+  useEffect(
+    () => () => {
+      cleanupPointerDragRef.current?.()
+      cleanupPointerDragRef.current = null
+      pointerDragRef.current = null
+    },
+    [],
+  )
 
   const segmentLabel = (() => {
     if (state.runStatus === 'idle') return 'Ready'
@@ -317,7 +490,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
         <div className="game-roster-panel" data-testid="game-roster-panel">
           <p className="game-screen-roster-title">{roster.name}</p>
           <div className="game-roster-columns">
-            <div className="game-roster-column" data-testid="bench-list">
+            <div className="game-roster-column" data-testid="bench-list" data-game-roster-zone="bench">
               <p className="game-roster-column-title">Bench</p>
               <div
                 className="game-roster-column-drop"
@@ -344,9 +517,13 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                     return (
                       <li
                         key={id}
-                        className="game-player-card game-player-card-draggable"
+                        className={playerCardClassName(id)}
                         data-testid={`game-player-bench-${id}`}
+                        data-game-player-card="true"
+                        data-player-id={id}
+                        data-player-zone="bench"
                         draggable
+                        onPointerDown={(e) => handlePlayerPointerDown(e, id)}
                         onDragStart={(e) => {
                           e.dataTransfer.effectAllowed = 'move'
                           e.dataTransfer.setData('text/plain', id)
@@ -414,7 +591,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                 />
               </div>
             </div>
-            <div className="game-roster-column" data-testid="on-field-list">
+            <div className="game-roster-column" data-testid="on-field-list" data-game-roster-zone="field">
               <p className="game-roster-column-title">On field</p>
               <div
                 className="game-roster-column-drop"
@@ -441,9 +618,13 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                     return (
                       <li
                         key={id}
-                        className="game-player-card game-player-card-draggable"
+                        className={playerCardClassName(id)}
                         data-testid={`game-player-field-${id}`}
+                        data-game-player-card="true"
+                        data-player-id={id}
+                        data-player-zone="field"
                         draggable
+                        onPointerDown={(e) => handlePlayerPointerDown(e, id)}
                         onDragStart={(e) => {
                           e.dataTransfer.effectAllowed = 'move'
                           e.dataTransfer.setData('text/plain', id)

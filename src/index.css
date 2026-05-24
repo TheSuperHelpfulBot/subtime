@@ -748,10 +748,17 @@ h1 {
 .game-player-card-draggable {
   cursor: grab;
   user-select: none;
+  touch-action: none;
 }
 
 .game-player-card-draggable:active {
   cursor: grabbing;
+}
+
+.game-player-card-pointer-dragging {
+  opacity: 0.72;
+  outline: 2px solid rgba(56, 189, 248, 0.7);
+  outline-offset: 1px;
 }
 
 .game-player-card-body {
