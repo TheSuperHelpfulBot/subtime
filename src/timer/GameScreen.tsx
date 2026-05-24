@@ -212,6 +212,21 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
     setPointerDropPreview(null)
   }
 
+  function dropZonePreview(playerId: string, zone: DropZone): PointerDropPreview {
+    if (zone === 'bench') {
+      if (fieldIdsRef.current.includes(playerId) || benchIdsRef.current.includes(playerId)) {
+        return { kind: 'zone', zone }
+      }
+      return null
+    }
+
+    if (fieldIdsRef.current.includes(playerId)) return { kind: 'zone', zone }
+    if (benchIdsRef.current.includes(playerId) && fieldIdsRef.current.length < gameType.onFieldCount) {
+      return { kind: 'zone', zone }
+    }
+    return null
+  }
+
   function dropPreviewForElement(playerId: string, element: Element | null): PointerDropPreview {
     const playerCard = closestHTMLElement(element, '[data-game-player-card="true"]')
     const targetPlayerId = playerCard?.dataset.playerId
@@ -231,18 +246,28 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
     const rosterZone = closestHTMLElement(element, '[data-game-roster-zone]')?.dataset
       .gameRosterZone
     if (!isDropZone(rosterZone)) return null
+    return dropZonePreview(playerId, rosterZone)
+  }
 
-    if (rosterZone === 'bench') {
-      if (fieldIdsRef.current.includes(playerId) || benchIdsRef.current.includes(playerId)) {
-        return { kind: 'zone', zone: rosterZone }
-      }
-      return null
+  function dropPreviewForPoint(playerId: string, clientX: number, clientY: number): PointerDropPreview {
+    const directPreview = dropPreviewForElement(
+      playerId,
+      document.elementFromPoint(clientX, clientY),
+    )
+    if (directPreview) return directPreview
+
+    for (const zoneElement of document.querySelectorAll<HTMLElement>('[data-game-roster-zone]')) {
+      const zone = zoneElement.dataset.gameRosterZone
+      if (!isDropZone(zone)) continue
+      const rect = zoneElement.getBoundingClientRect()
+      const inside =
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
+      if (inside) return dropZonePreview(playerId, zone)
     }
 
-    if (fieldIdsRef.current.includes(playerId)) return { kind: 'zone', zone: rosterZone }
-    if (benchIdsRef.current.includes(playerId) && fieldIdsRef.current.length < gameType.onFieldCount) {
-      return { kind: 'zone', zone: rosterZone }
-    }
     return null
   }
 
@@ -335,10 +360,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
       if (session.hasMoved) {
         event.preventDefault()
         setPointerDropPreview(
-          dropPreviewForElement(
-            session.playerId,
-            document.elementFromPoint(event.clientX, event.clientY),
-          ),
+          dropPreviewForPoint(session.playerId, event.clientX, event.clientY),
         )
       }
     }
