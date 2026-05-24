@@ -51,6 +51,11 @@ type PointerDragSession = {
   hasMoved: boolean
 }
 
+type PointerDropPreview =
+  | { kind: 'player'; playerId: string }
+  | { kind: 'zone'; zone: DropZone }
+  | null
+
 function playerLabel(p: PlayerRecord): string {
   const name = p.name.trim()
   const num = p.shirtNumber.trim()
@@ -101,6 +106,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
   const pointerDragRef = useRef<PointerDragSession | null>(null)
   const cleanupPointerDragRef = useRef<(() => void) | null>(null)
   const [pointerDraggingPlayerId, setPointerDraggingPlayerId] = useState<string | null>(null)
+  const [pointerDropPreview, setPointerDropPreview] = useState<PointerDropPreview>(null)
 
   const [playtime, setPlaytime] = useState<PlaytimeSeconds>(() =>
     createZeroPlaytime(getRosterById(rosterId)?.players.map((p) => p.id) ?? []),
@@ -203,6 +209,66 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
     cleanupPointerDragRef.current = null
     pointerDragRef.current = null
     setPointerDraggingPlayerId(null)
+    setPointerDropPreview(null)
+  }
+
+  function dropZonePreview(playerId: string, zone: DropZone): PointerDropPreview {
+    if (zone === 'bench') {
+      if (fieldIdsRef.current.includes(playerId) || benchIdsRef.current.includes(playerId)) {
+        return { kind: 'zone', zone }
+      }
+      return null
+    }
+
+    if (fieldIdsRef.current.includes(playerId)) return { kind: 'zone', zone }
+    if (benchIdsRef.current.includes(playerId) && fieldIdsRef.current.length < gameType.onFieldCount) {
+      return { kind: 'zone', zone }
+    }
+    return null
+  }
+
+  function dropPreviewForElement(playerId: string, element: Element | null): PointerDropPreview {
+    const playerCard = closestHTMLElement(element, '[data-game-player-card="true"]')
+    const targetPlayerId = playerCard?.dataset.playerId
+    const targetZone = playerCard?.dataset.playerZone
+
+    if (targetPlayerId && targetPlayerId !== playerId && isDropZone(targetZone)) {
+      const draggingFromField = fieldIdsRef.current.includes(playerId)
+      const draggingFromBench = benchIdsRef.current.includes(playerId)
+      if (targetZone === 'bench' && (draggingFromField || draggingFromBench)) {
+        return { kind: 'player', playerId: targetPlayerId }
+      }
+      if (targetZone === 'field' && (draggingFromBench || draggingFromField)) {
+        return { kind: 'player', playerId: targetPlayerId }
+      }
+    }
+
+    const rosterZone = closestHTMLElement(element, '[data-game-roster-zone]')?.dataset
+      .gameRosterZone
+    if (!isDropZone(rosterZone)) return null
+    return dropZonePreview(playerId, rosterZone)
+  }
+
+  function dropPreviewForPoint(playerId: string, clientX: number, clientY: number): PointerDropPreview {
+    const directPreview = dropPreviewForElement(
+      playerId,
+      document.elementFromPoint(clientX, clientY),
+    )
+    if (directPreview) return directPreview
+
+    for (const zoneElement of document.querySelectorAll<HTMLElement>('[data-game-roster-zone]')) {
+      const zone = zoneElement.dataset.gameRosterZone
+      if (!isDropZone(zone)) continue
+      const rect = zoneElement.getBoundingClientRect()
+      const inside =
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
+      if (inside) return dropZonePreview(playerId, zone)
+    }
+
+    return null
   }
 
   function applyPointerDrop(playerId: string, clientX: number, clientY: number) {
@@ -291,7 +357,12 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
       if (Math.hypot(dx, dy) >= POINTER_DRAG_THRESHOLD_PX) {
         session.hasMoved = true
       }
-      if (session.hasMoved) event.preventDefault()
+      if (session.hasMoved) {
+        event.preventDefault()
+        setPointerDropPreview(
+          dropPreviewForPoint(session.playerId, event.clientX, event.clientY),
+        )
+      }
     }
 
     const handlePointerUp = (event: PointerEvent) => {
@@ -326,6 +397,20 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
       'game-player-card',
       'game-player-card-draggable',
       pointerDraggingPlayerId === playerId ? 'game-player-card-pointer-dragging' : '',
+      pointerDropPreview?.kind === 'player' && pointerDropPreview.playerId === playerId
+        ? 'game-player-card-drop-target'
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+  }
+
+  function columnDropClassName(zone: DropZone) {
+    return [
+      'game-roster-column-drop',
+      pointerDropPreview?.kind === 'zone' && pointerDropPreview.zone === zone
+        ? 'game-roster-column-drop-target'
+        : '',
     ]
       .filter(Boolean)
       .join(' ')
@@ -493,7 +578,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
             <div className="game-roster-column" data-testid="bench-list" data-game-roster-zone="bench">
               <p className="game-roster-column-title">Bench</p>
               <div
-                className="game-roster-column-drop"
+                className={columnDropClassName('bench')}
                 data-testid="bench-column-drop"
                 onDragOver={(e) => {
                   e.preventDefault()
@@ -594,7 +679,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
             <div className="game-roster-column" data-testid="on-field-list" data-game-roster-zone="field">
               <p className="game-roster-column-title">On field</p>
               <div
-                className="game-roster-column-drop"
+                className={columnDropClassName('field')}
                 data-testid="on-field-column-drop"
                 onDragOver={(e) => {
                   e.preventDefault()

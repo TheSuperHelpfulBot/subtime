@@ -761,6 +761,24 @@ h1 {
   outline-offset: 1px;
 }
 
+.game-player-card-drop-target {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.45), 0 10px 24px rgba(56, 189, 248, 0.2);
+  background: rgba(14, 116, 144, 0.35);
+}
+
+.game-roster-column-drop-target {
+  border-radius: 0.55rem;
+  outline: 2px dashed rgba(56, 189, 248, 0.75);
+  outline-offset: 3px;
+  background: rgba(14, 116, 144, 0.18);
+}
+
+.game-roster-column-drop-target .game-roster-drop-gutter {
+  border-color: rgba(56, 189, 248, 0.75);
+  background: rgba(14, 116, 144, 0.24);
+}
+
 .game-player-card-body {
   padding: 0.45rem 0.5rem 0.35rem;
 }
