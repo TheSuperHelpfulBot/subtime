@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, type ReactElement } from 'react'
+import AppChrome from './AppChrome'
 import LoadSavedRosters from './roster/LoadSavedRosters'
 import SetUpRoster from './roster/SetUpRoster'
 import GameScreen from './timer/GameScreen'
@@ -15,6 +16,15 @@ type Phase = 'welcome' | 'loadSaved' | 'setup' | 'rosterPick' | 'rosterSetup' | 
 type SetupIntent =
   | { kind: 'create'; fromLoadSaved: boolean }
   | { kind: 'edit'; gameType: GameTypeRecord }
+
+function withAppChrome(screen: ReactElement) {
+  return (
+    <>
+      <AppChrome />
+      {screen}
+    </>
+  )
+}
 
 export default function App() {
   const [phase, setPhase] = useState<Phase>('welcome')
@@ -90,7 +100,7 @@ export default function App() {
     const initialOnFieldCount =
       setupIntent.kind === 'edit' ? setupIntent.gameType.onFieldCount : undefined
 
-    return (
+    return withAppChrome(
       <main className="welcome">
         <div className="welcome-inner timer-layout">
           <TimerConfigForm
@@ -109,18 +119,18 @@ export default function App() {
             onCancel={showSetupBack ? goToLoadSaved : undefined}
           />
         </div>
-      </main>
+      </main>,
     )
   }
 
   if (phase === 'game' && activeGameType && activeRosterId) {
-    return (
-      <GameScreen gameType={activeGameType} rosterId={activeRosterId} onLeave={leaveGame} />
+    return withAppChrome(
+      <GameScreen gameType={activeGameType} rosterId={activeRosterId} onLeave={leaveGame} />,
     )
   }
 
   if (phase === 'rosterPick' && pendingGameType) {
-    return (
+    return withAppChrome(
       <main className="welcome">
         <div className="welcome-inner timer-layout">
           <LoadSavedRosters
@@ -129,12 +139,12 @@ export default function App() {
             onChooseRoster={(rosterId) => openGameWithRoster(pendingGameType, rosterId)}
           />
         </div>
-      </main>
+      </main>,
     )
   }
 
   if (phase === 'rosterSetup' && pendingGameType) {
-    return (
+    return withAppChrome(
       <main className="welcome">
         <div className="welcome-inner timer-layout">
           <SetUpRoster
@@ -143,12 +153,12 @@ export default function App() {
             onComplete={(rosterId) => openGameWithRoster(pendingGameType, rosterId)}
           />
         </div>
-      </main>
+      </main>,
     )
   }
 
   if (phase === 'loadSaved') {
-    return (
+    return withAppChrome(
       <main className="welcome">
         <div className="welcome-inner timer-layout">
           <LoadSavedGameTypes
@@ -157,11 +167,11 @@ export default function App() {
             onStartGame={startGameFromList}
           />
         </div>
-      </main>
+      </main>,
     )
   }
 
-  return (
+  return withAppChrome(
     <main className="welcome">
       <div className="welcome-inner">
         <h1>Simple Subs</h1>
@@ -170,6 +180,6 @@ export default function App() {
           Get started
         </button>
       </div>
-    </main>
+    </main>,
   )
 }
