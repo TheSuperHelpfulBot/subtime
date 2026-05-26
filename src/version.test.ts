@@ -1,10 +1,6 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
+import packageJson from '../package.json'
 import { APP_VERSION_INFO, formatAppVersionLabel } from './version'
-
-const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
-  version: string
-}
 
 describe('app version metadata', () => {
   test('uses package.json as the release version source of truth', () => {
