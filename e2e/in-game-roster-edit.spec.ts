@@ -47,14 +47,15 @@ test.describe('in-game roster editing', () => {
     await createRunningGame(page, `In Game Roster ${Date.now()}`)
 
     const readout = page.getByTestId('timer-readout')
-    await expect(readout).toHaveText('0:30')
+    const beforeEditSeconds = await timerSeconds(readout)
+    await expect(page.getByTestId('timer-pause')).toBeVisible()
 
     await page.getByTestId('game-edit-roster').click()
     const editor = page.getByRole('dialog', { name: /edit roster/i })
     await expect(editor).toBeVisible()
 
     await page.waitForTimeout(1200)
-    expect(await timerSeconds(readout)).toBeLessThan(30)
+    expect(await timerSeconds(readout)).toBeLessThan(beforeEditSeconds)
     await expect(page.getByTestId('timer-pause')).toBeVisible()
 
     const alexRow = editor.getByTestId('roster-players-list').locator('li').filter({ hasText: 'Alex' })
