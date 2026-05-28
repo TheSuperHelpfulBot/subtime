@@ -347,6 +347,7 @@ function RosterPlayerEditRow({
 
   return (
     <div className="roster-player-edit-card">
+      <span className="sr-only">Editing {formatPlayerLine(player)}</span>
       <div className="roster-add-fields-row roster-player-edit-fields">
         <div className="field">
           <label htmlFor={editNameId}>Name</label>
