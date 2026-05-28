@@ -20,6 +20,8 @@ export type RosterEditorProps = {
   backLabel?: string
   /** When set, shows a primary action to leave the editor and start the game. */
   onContinueToGame?: () => void
+  /** Disable destructive roster deletion when editing during an active game. */
+  allowDeleteRoster?: boolean
 }
 
 function formatPlayerLine(p: PlayerRecord): string {
@@ -116,6 +118,7 @@ export default function RosterEditor({
   onChanged,
   backLabel = 'Back to list',
   onContinueToGame,
+  allowDeleteRoster = true,
 }: RosterEditorProps) {
   const [rosterName, setRosterName] = useState(() => getRosterById(rosterId)?.name ?? '')
   const [playerName, setPlayerName] = useState('')
@@ -317,11 +320,13 @@ export default function RosterEditor({
         </div>
       ) : null}
 
-      <div className="roster-editor-danger">
-        <button type="button" className="btn-secondary danger-outline" onClick={handleDeleteRoster}>
-          Delete roster
-        </button>
-      </div>
+      {allowDeleteRoster ? (
+        <div className="roster-editor-danger">
+          <button type="button" className="btn-secondary danger-outline" onClick={handleDeleteRoster}>
+            Delete roster
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -342,6 +347,7 @@ function RosterPlayerEditRow({
 
   return (
     <div className="roster-player-edit-card">
+      <span className="sr-only">Editing {formatPlayerLine(player)}</span>
       <div className="roster-add-fields-row roster-player-edit-fields">
         <div className="field">
           <label htmlFor={editNameId}>Name</label>

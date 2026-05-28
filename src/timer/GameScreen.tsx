@@ -6,7 +6,8 @@ import {
   type DragEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { getRosterById, type PlayerRecord } from '../storage/rosterStorage'
+import RosterEditor from '../roster/RosterEditor'
+import { getRosterById, type PlayerRecord, type RosterRecord } from '../storage/rosterStorage'
 import type { GameTypeRecord } from '../storage/gameTypesStorage'
 import {
   createZeroPlaytime,
@@ -19,6 +20,7 @@ import {
   tickPlaytime,
   type PlaytimeSeconds,
 } from './substitutionPlaytime'
+import { syncLineupWithRoster } from './rosterLineupSync'
 import {
   createIdleState,
   formatClock,
@@ -81,7 +83,8 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
   const stateRef = useRef<GameTimerState>(state)
   stateRef.current = state
 
-  const roster = useMemo(() => getRosterById(rosterId), [rosterId])
+  const [roster, setRoster] = useState<RosterRecord | null>(() => getRosterById(rosterId))
+  const [isEditingRoster, setIsEditingRoster] = useState(false)
 
   const [benchIds, setBenchIds] = useState<string[]>(() => {
     const r = getRosterById(rosterId)
@@ -111,9 +114,13 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
   const [playtime, setPlaytime] = useState<PlaytimeSeconds>(() =>
     createZeroPlaytime(getRosterById(rosterId)?.players.map((p) => p.id) ?? []),
   )
+  const playtimeRef = useRef(playtime)
+  playtimeRef.current = playtime
 
   useEffect(() => {
     const r = getRosterById(rosterId)
+    setRoster(r)
+    setIsEditingRoster(false)
     if (r) {
       const ids = r.players.map((p) => p.id)
       const { fieldIds: f, benchIds: b } = splitInitialLineup(ids, gameType.onFieldCount)
@@ -126,6 +133,27 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
       setPlaytime({})
     }
   }, [gameType.id, gameType.onFieldCount, rosterId])
+
+  function refreshRosterAfterEdit() {
+    const nextRoster = getRosterById(rosterId)
+    setRoster(nextRoster)
+    if (!nextRoster) {
+      setBenchIds([])
+      setFieldIds([])
+      setPlaytime({})
+      return
+    }
+
+    const synced = syncLineupWithRoster({
+      fieldIds: fieldIdsRef.current,
+      benchIds: benchIdsRef.current,
+      playtime: playtimeRef.current,
+      rosterPlayerIds: nextRoster.players.map((p) => p.id),
+    })
+    setFieldIds(synced.fieldIds)
+    setBenchIds(synced.benchIds)
+    setPlaytime(synced.playtime)
+  }
 
   const playerById = useMemo(() => {
     const map = new Map<string, PlayerRecord>()
@@ -573,7 +601,17 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
 
       {roster ? (
         <div className="game-roster-panel" data-testid="game-roster-panel">
-          <p className="game-screen-roster-title">{roster.name}</p>
+          <div className="game-roster-header">
+            <p className="game-screen-roster-title">{roster.name}</p>
+            <button
+              type="button"
+              className="btn-secondary game-edit-roster"
+              data-testid="game-edit-roster"
+              onClick={() => setIsEditingRoster(true)}
+            >
+              Edit roster
+            </button>
+          </div>
           <div className="game-roster-columns">
             <div className="game-roster-column" data-testid="bench-list" data-game-roster-zone="bench">
               <p className="game-roster-column-title">Bench</p>
@@ -794,6 +832,28 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
           </p>
         </div>
       )}
+
+      {isEditingRoster && roster ? (
+        <div className="game-roster-editor-backdrop" role="presentation">
+          <section
+            className="game-roster-editor-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="game-roster-editor-title"
+          >
+            <h2 id="game-roster-editor-title" className="sr-only">
+              Edit roster
+            </h2>
+            <RosterEditor
+              rosterId={rosterId}
+              onBack={() => setIsEditingRoster(false)}
+              onChanged={refreshRosterAfterEdit}
+              backLabel="Back to game"
+              allowDeleteRoster={false}
+            />
+          </section>
+        </div>
+      ) : null}
     </main>
   )
 }

@@ -808,6 +808,49 @@ h1 {
   overflow-y: auto;
 }
 
+.game-roster-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.game-roster-header .game-screen-roster-title {
+  margin-bottom: 0;
+}
+
+.game-edit-roster {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+.game-roster-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: stretch center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.76);
+}
+
+.game-roster-editor-dialog {
+  width: min(100%, 28rem);
+  max-height: calc(100dvh - 2rem);
+  align-self: center;
+  overflow-y: auto;
+  border: 1px solid #334155;
+  border-radius: 0.9rem;
+  padding: 1rem;
+  color: #e2e8f0;
+  background: #0f172a;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
 .game-roster-columns {
   flex: 1 1 auto;
   min-height: min(52vh, 22rem);
