@@ -4,14 +4,26 @@ import LoadSavedRosters from './roster/LoadSavedRosters'
 import SetUpRoster from './roster/SetUpRoster'
 import GameScreen from './timer/GameScreen'
 import LoadSavedGameTypes from './timer/LoadSavedGameTypes'
+import SubStrategySetup from './timer/SubStrategySetup'
 import TimerConfigForm from './timer/TimerConfigForm'
 import { writeJson } from './storage/appStorage'
 import type { GameTypeRecord } from './storage/gameTypesStorage'
 import { getGameTypes } from './storage/gameTypesStorage'
 import { getRosters } from './storage/rosterStorage'
+import {
+  DEFAULT_SUB_STRATEGY_CONFIG,
+  type SubStrategyConfig,
+} from './timer/subStrategy/types'
 import { timerConfigToRawForm } from './timer/timerConfig'
 
-type Phase = 'welcome' | 'loadSaved' | 'setup' | 'rosterPick' | 'rosterSetup' | 'game'
+type Phase =
+  | 'welcome'
+  | 'loadSaved'
+  | 'setup'
+  | 'rosterPick'
+  | 'rosterSetup'
+  | 'strategySetup'
+  | 'game'
 
 type SetupIntent =
   | { kind: 'create'; fromLoadSaved: boolean }
@@ -32,6 +44,10 @@ export default function App() {
   const [pendingGameType, setPendingGameType] = useState<GameTypeRecord | null>(null)
   const [activeGameType, setActiveGameType] = useState<GameTypeRecord | null>(null)
   const [activeRosterId, setActiveRosterId] = useState<string | null>(null)
+  const [subStrategyConfig, setSubStrategyConfig] = useState<SubStrategyConfig>(
+    DEFAULT_SUB_STRATEGY_CONFIG,
+  )
+  const [unavailablePlayerIds, setUnavailablePlayerIds] = useState<string[]>([])
 
   function handleGetStarted() {
     writeJson('onboarding', { startedAt: Date.now() })
@@ -68,11 +84,26 @@ export default function App() {
     }
   }
 
-  function openGameWithRoster(gameType: GameTypeRecord, rosterId: string) {
+  function openStrategySetup(gameType: GameTypeRecord, rosterId: string) {
+    setPendingGameType(gameType)
     setActiveGameType(gameType)
     setActiveRosterId(rosterId)
+    setSubStrategyConfig(DEFAULT_SUB_STRATEGY_CONFIG)
+    setUnavailablePlayerIds([])
+    setPhase('strategySetup')
+  }
+
+  function startGameFromStrategy(config: SubStrategyConfig) {
+    setSubStrategyConfig(config)
     setPendingGameType(null)
     setPhase('game')
+  }
+
+  function backFromStrategySetup() {
+    setActiveGameType(null)
+    setActiveRosterId(null)
+    setPendingGameType(null)
+    setPhase('loadSaved')
   }
 
   function backFromRosterFlow() {
@@ -83,6 +114,8 @@ export default function App() {
   function leaveGame() {
     setActiveGameType(null)
     setActiveRosterId(null)
+    setSubStrategyConfig(DEFAULT_SUB_STRATEGY_CONFIG)
+    setUnavailablePlayerIds([])
     setPhase('loadSaved')
   }
 
@@ -125,7 +158,30 @@ export default function App() {
 
   if (phase === 'game' && activeGameType && activeRosterId) {
     return withAppChrome(
-      <GameScreen gameType={activeGameType} rosterId={activeRosterId} onLeave={leaveGame} />,
+      <GameScreen
+        gameType={activeGameType}
+        rosterId={activeRosterId}
+        subStrategyConfig={subStrategyConfig}
+        unavailableIds={unavailablePlayerIds}
+        onConfigChange={setSubStrategyConfig}
+        onUnavailableChange={setUnavailablePlayerIds}
+        onLeave={leaveGame}
+      />,
+    )
+  }
+
+  if (phase === 'strategySetup' && activeGameType && activeRosterId) {
+    return withAppChrome(
+      <main className="welcome">
+        <div className="welcome-inner timer-layout">
+          <SubStrategySetup
+            gameType={activeGameType}
+            rosterId={activeRosterId}
+            onBack={backFromStrategySetup}
+            onStartGame={startGameFromStrategy}
+          />
+        </div>
+      </main>,
     )
   }
 
@@ -135,8 +191,10 @@ export default function App() {
         <div className="welcome-inner timer-layout">
           <LoadSavedRosters
             gameType={pendingGameType}
+            unavailableIds={unavailablePlayerIds}
+            onUnavailableChange={setUnavailablePlayerIds}
             onBack={backFromRosterFlow}
-            onChooseRoster={(rosterId) => openGameWithRoster(pendingGameType, rosterId)}
+            onChooseRoster={(rosterId) => openStrategySetup(pendingGameType, rosterId)}
           />
         </div>
       </main>,
@@ -149,8 +207,10 @@ export default function App() {
         <div className="welcome-inner timer-layout">
           <SetUpRoster
             gameType={pendingGameType}
+            unavailableIds={unavailablePlayerIds}
+            onUnavailableChange={setUnavailablePlayerIds}
             onBack={backFromRosterFlow}
-            onComplete={(rosterId) => openGameWithRoster(pendingGameType, rosterId)}
+            onComplete={(rosterId) => openStrategySetup(pendingGameType, rosterId)}
           />
         </div>
       </main>,

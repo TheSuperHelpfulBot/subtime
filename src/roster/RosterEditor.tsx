@@ -11,11 +11,16 @@ import {
   updateRosterName,
   type PlayerRecord,
 } from '../storage/rosterStorage'
+import { toggleUnavailable } from '../timer/playerAvailability'
+import ToggleSwitch from './ToggleSwitch'
 
 export type RosterEditorProps = {
   rosterId: string
   onBack: () => void
   onChanged: () => void
+  /** Session-only unavailable flags for this game. */
+  unavailableIds?: string[]
+  onUnavailableChange?: (ids: string[]) => void
   /** Replaces the default "Back to list" label on the back control. */
   backLabel?: string
   /** When set, shows a primary action to leave the editor and start the game. */
@@ -116,6 +121,8 @@ export default function RosterEditor({
   rosterId,
   onBack,
   onChanged,
+  unavailableIds = [],
+  onUnavailableChange,
   backLabel = 'Back to list',
   onContinueToGame,
   allowDeleteRoster = true,
@@ -213,6 +220,12 @@ export default function RosterEditor({
 
       <div className="roster-editor-players">
         <p className="roster-editor-section-label">Players</p>
+        {onUnavailableChange ? (
+          <p className="timer-config-lead roster-availability-hint">
+            Mark players unavailable if they cannot play today. They will not appear on the bench
+            or field during the match.
+          </p>
+        ) : null}
         <form
           className="roster-add-player"
           onSubmit={(e) => {
@@ -273,7 +286,20 @@ export default function RosterEditor({
                 />
               ) : (
                 <div className="roster-player-card-main">
-                  <span className="roster-player-line">{formatPlayerLine(p)}</span>
+                  <div className="roster-player-card-info">
+                    <span className="roster-player-line">{formatPlayerLine(p)}</span>
+                    {onUnavailableChange ? (
+                      <ToggleSwitch
+                        id={`roster-unavail-${p.id}`}
+                        checked={unavailableIds.includes(p.id)}
+                        onChange={(checked) =>
+                          onUnavailableChange(toggleUnavailable(unavailableIds, p.id, checked))
+                        }
+                        label="Unavailable today"
+                        testId={`roster-unavailable-${p.id}`}
+                      />
+                    ) : null}
+                  </div>
                   <div className="roster-player-card-actions">
                     <button
                       type="button"
@@ -291,6 +317,9 @@ export default function RosterEditor({
                       title="Remove"
                       onClick={() => {
                         removePlayerFromRoster(rosterId, p.id)
+                        if (onUnavailableChange) {
+                          onUnavailableChange(unavailableIds.filter((id) => id !== p.id))
+                        }
                         onChanged()
                         refreshLocal()
                       }}

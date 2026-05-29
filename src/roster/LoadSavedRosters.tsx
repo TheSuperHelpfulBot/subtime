@@ -15,12 +15,16 @@ type ViewMode =
 
 export type LoadSavedRostersProps = {
   gameType: GameTypeRecord
+  unavailableIds: string[]
+  onUnavailableChange: (ids: string[]) => void
   onBack: () => void
   onChooseRoster: (rosterId: string) => void
 }
 
 export default function LoadSavedRosters({
   gameType,
+  unavailableIds,
+  onUnavailableChange,
   onBack,
   onChooseRoster,
 }: LoadSavedRostersProps) {
@@ -52,6 +56,8 @@ export default function LoadSavedRosters({
     return (
       <RosterEditor
         rosterId={view.rosterId}
+        unavailableIds={unavailableIds}
+        onUnavailableChange={onUnavailableChange}
         onBack={() => {
           refresh()
           setView({ kind: 'list' })

@@ -54,6 +54,8 @@ export default function RecommendedSubOverlay({
 
     update()
 
+    if (typeof ResizeObserver === 'undefined') return
+
     const resizeObserver = new ResizeObserver(update)
     resizeObserver.observe(container)
 

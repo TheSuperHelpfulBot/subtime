@@ -1,3 +1,4 @@
+import { applyUnavailableToLineup } from './playerAvailability'
 import type { PlaytimeSeconds } from './substitutionPlaytime'
 
 export type RosterLineupSyncInput = {
@@ -5,6 +6,7 @@ export type RosterLineupSyncInput = {
   benchIds: readonly string[]
   playtime: PlaytimeSeconds
   rosterPlayerIds: readonly string[]
+  unavailableIds?: readonly string[]
 }
 
 export type RosterLineupSyncResult = {
@@ -18,14 +20,16 @@ export function syncLineupWithRoster({
   benchIds,
   playtime,
   rosterPlayerIds,
+  unavailableIds = [],
 }: RosterLineupSyncInput): RosterLineupSyncResult {
+  const unavailable = new Set(unavailableIds)
   const rosterIds = new Set(rosterPlayerIds)
   const field = fieldIds.filter((id) => rosterIds.has(id))
   const bench = benchIds.filter((id) => rosterIds.has(id))
   const placedIds = new Set([...field, ...bench])
 
   for (const id of rosterPlayerIds) {
-    if (!placedIds.has(id)) {
+    if (!placedIds.has(id) && !unavailable.has(id)) {
       bench.push(id)
       placedIds.add(id)
     }
@@ -36,9 +40,11 @@ export function syncLineupWithRoster({
     nextPlaytime[id] = playtime[id] ?? 0
   }
 
+  const enforced = applyUnavailableToLineup(field, bench, unavailableIds)
+
   return {
-    fieldIds: field,
-    benchIds: bench,
+    fieldIds: enforced.fieldIds,
+    benchIds: enforced.benchIds,
     playtime: nextPlaytime,
   }
 }

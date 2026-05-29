@@ -702,10 +702,22 @@ h1 {
 
 .roster-player-card-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.65rem;
   min-width: 0;
+}
+
+.roster-player-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.roster-availability-hint {
+  margin: 0 0 0.75rem;
 }
 
 .roster-player-line {
@@ -821,11 +833,22 @@ h1 {
   margin-bottom: 0;
 }
 
+.game-roster-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
 .game-edit-roster {
   width: auto;
   flex: 0 0 auto;
   padding: 0.4rem 0.65rem;
   font-size: 0.78rem;
+}
+
+.sub-strategy-editor {
+  width: 100%;
 }
 
 .game-roster-editor-backdrop {
@@ -1139,4 +1162,92 @@ h1 {
 
 .set-up-roster {
   width: 100%;
+}
+
+.sub-strategy-setup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.sub-strategy-form .field + .toggle-switch {
+  margin-top: 0.5rem;
+}
+
+.sub-strategy-unavailable-fieldset {
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+}
+
+.sub-strategy-unavailable-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.toggle-switch-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toggle-switch-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.toggle-switch-track {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #334155;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.toggle-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: #e2e8f0;
+  transition: transform 0.15s ease;
+}
+
+.toggle-switch-input:focus-visible + .toggle-switch-track {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+.toggle-switch-input:checked + .toggle-switch-track {
+  background: #0369a1;
+}
+
+.toggle-switch-input:checked + .toggle-switch-track::after {
+  transform: translateX(1.25rem);
 }
