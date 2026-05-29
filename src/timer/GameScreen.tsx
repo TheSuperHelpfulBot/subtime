@@ -21,6 +21,25 @@ import {
   type PlaytimeSeconds,
 } from './substitutionPlaytime'
 import { syncLineupWithRoster } from './rosterLineupSync'
+import { sortIdsByPlaytime } from './gameLineupDisplay'
+import {
+  isPlayerInRecommendedSubPair,
+  recommendedSubPairsFromActions,
+} from './recommendedSubPairs'
+import { buildGameState } from './subStrategy/buildGameState'
+import { calculateStrategy } from './subStrategy/calculateStrategy'
+import { elapsedPlayingSeconds } from './elapsedPlayingTime'
+import { recordSubstitutionPermanentlyOut } from './subStrategy/recordSubstitution'
+import RecommendedSubOverlay from './RecommendedSubOverlay'
+import { primeBoxingBellAudio } from './boxingBell'
+import { useScreenWakeLockForTimer } from './useScreenWakeLockForTimer'
+import { useSubRecommendationBell } from './useSubRecommendationBell'
+import SubStrategyEditor from './SubStrategyEditor'
+import {
+  applyUnavailableToLineup,
+  isEligibleForField,
+} from './playerAvailability'
+import type { SubStrategyConfig } from './subStrategy/types'
 import {
   createIdleState,
   formatClock,
@@ -37,6 +56,10 @@ import {
 export type GameScreenProps = {
   gameType: GameTypeRecord
   rosterId: string
+  subStrategyConfig: SubStrategyConfig
+  unavailableIds: string[]
+  onConfigChange: (config: SubStrategyConfig) => void
+  onUnavailableChange: (ids: string[]) => void
   onLeave: () => void
 }
 
@@ -75,7 +98,15 @@ function isDropZone(value: string | undefined): value is DropZone {
   return value === 'bench' || value === 'field'
 }
 
-export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenProps) {
+export default function GameScreen({
+  gameType,
+  rosterId,
+  subStrategyConfig,
+  unavailableIds,
+  onConfigChange,
+  onUnavailableChange,
+  onLeave,
+}: GameScreenProps) {
   const [state, setState] = useState<GameTimerState>(() =>
     createIdleState(gameType.config),
   )
@@ -83,56 +114,99 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
   const stateRef = useRef<GameTimerState>(state)
   stateRef.current = state
 
+  useScreenWakeLockForTimer(state.runStatus)
+
   const [roster, setRoster] = useState<RosterRecord | null>(() => getRosterById(rosterId))
   const [isEditingRoster, setIsEditingRoster] = useState(false)
+  const [isEditingStrategy, setIsEditingStrategy] = useState(false)
 
   const [benchIds, setBenchIds] = useState<string[]>(() => {
     const r = getRosterById(rosterId)
     if (!r) return []
-    return splitInitialLineup(
-      r.players.map((p) => p.id),
-      gameType.onFieldCount,
-    ).benchIds
+    const ids = r.players.map((p) => p.id)
+    const lineup = splitInitialLineup(ids, gameType.onFieldCount)
+    return applyUnavailableToLineup(lineup.fieldIds, lineup.benchIds, unavailableIds).benchIds
   })
   const [fieldIds, setFieldIds] = useState<string[]>(() => {
     const r = getRosterById(rosterId)
     if (!r) return []
-    return splitInitialLineup(
-      r.players.map((p) => p.id),
-      gameType.onFieldCount,
-    ).fieldIds
+    const ids = r.players.map((p) => p.id)
+    const lineup = splitInitialLineup(ids, gameType.onFieldCount)
+    return applyUnavailableToLineup(lineup.fieldIds, lineup.benchIds, unavailableIds).fieldIds
   })
   const fieldIdsRef = useRef(fieldIds)
   fieldIdsRef.current = fieldIds
   const benchIdsRef = useRef(benchIds)
   benchIdsRef.current = benchIds
+  const rosterColumnsWrapRef = useRef<HTMLDivElement>(null)
   const pointerDragRef = useRef<PointerDragSession | null>(null)
   const cleanupPointerDragRef = useRef<(() => void) | null>(null)
   const [pointerDraggingPlayerId, setPointerDraggingPlayerId] = useState<string | null>(null)
   const [pointerDropPreview, setPointerDropPreview] = useState<PointerDropPreview>(null)
+
+  const [permanentlyOutIds, setPermanentlyOutIds] = useState<string[]>([])
+  const [lastSubElapsedPlayingSeconds, setLastSubElapsedPlayingSeconds] = useState<number | null>(
+    null,
+  )
 
   const [playtime, setPlaytime] = useState<PlaytimeSeconds>(() =>
     createZeroPlaytime(getRosterById(rosterId)?.players.map((p) => p.id) ?? []),
   )
   const playtimeRef = useRef(playtime)
   playtimeRef.current = playtime
+  const unavailableIdsRef = useRef(unavailableIds)
+  unavailableIdsRef.current = unavailableIds
+  const subStrategyConfigRef = useRef(subStrategyConfig)
+  subStrategyConfigRef.current = subStrategyConfig
+
+  const permanentlyOutIdsRef = useRef(permanentlyOutIds)
+  permanentlyOutIdsRef.current = permanentlyOutIds
+
+  function canPlaceOnField(playerId: string): boolean {
+    return isEligibleForField(
+      playerId,
+      unavailableIdsRef.current,
+      permanentlyOutIdsRef.current,
+      subStrategyConfigRef.current.unlimitedReturns,
+    )
+  }
 
   useEffect(() => {
     const r = getRosterById(rosterId)
     setRoster(r)
     setIsEditingRoster(false)
+    setIsEditingStrategy(false)
     if (r) {
       const ids = r.players.map((p) => p.id)
       const { fieldIds: f, benchIds: b } = splitInitialLineup(ids, gameType.onFieldCount)
-      setFieldIds(f)
-      setBenchIds(b)
+      const enforced = applyUnavailableToLineup(f, b, unavailableIdsRef.current)
+      setFieldIds(enforced.fieldIds)
+      setBenchIds(enforced.benchIds)
       setPlaytime(createZeroPlaytime(ids))
+      setPermanentlyOutIds([])
+      setLastSubElapsedPlayingSeconds(null)
     } else {
       setBenchIds([])
       setFieldIds([])
       setPlaytime({})
     }
   }, [gameType.id, gameType.onFieldCount, rosterId])
+
+  useEffect(() => {
+    const rosterPlayerIds = roster?.players.map((p) => p.id) ?? []
+    if (rosterPlayerIds.length === 0) return
+
+    const synced = syncLineupWithRoster({
+      fieldIds: fieldIdsRef.current,
+      benchIds: benchIdsRef.current,
+      playtime: playtimeRef.current,
+      rosterPlayerIds,
+      unavailableIds,
+    })
+    setFieldIds(synced.fieldIds)
+    setBenchIds(synced.benchIds)
+    setPlaytime(synced.playtime)
+  }, [unavailableIds, roster])
 
   function refreshRosterAfterEdit() {
     const nextRoster = getRosterById(rosterId)
@@ -144,11 +218,20 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
       return
     }
 
+    const rosterPlayerIds = nextRoster.players.map((p) => p.id)
+    const prunedUnavailable = unavailableIdsRef.current.filter((id) =>
+      rosterPlayerIds.includes(id),
+    )
+    if (prunedUnavailable.length !== unavailableIdsRef.current.length) {
+      onUnavailableChange(prunedUnavailable)
+    }
+
     const synced = syncLineupWithRoster({
       fieldIds: fieldIdsRef.current,
       benchIds: benchIdsRef.current,
       playtime: playtimeRef.current,
-      rosterPlayerIds: nextRoster.players.map((p) => p.id),
+      rosterPlayerIds,
+      unavailableIds: prunedUnavailable,
     })
     setFieldIds(synced.fieldIds)
     setBenchIds(synced.benchIds)
@@ -171,6 +254,68 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
 
   const lineupReady = isStartingLineupComplete(fieldIds.length, gameType.onFieldCount)
 
+  const displayBenchIds = useMemo(
+    () => sortIdsByPlaytime(benchIds, playtime, 'asc'),
+    [benchIds, playtime],
+  )
+  const displayFieldIds = useMemo(
+    () => sortIdsByPlaytime(fieldIds, playtime, 'desc'),
+    [fieldIds, playtime],
+  )
+  const strategy = useMemo(
+    () =>
+      calculateStrategy(
+        buildGameState({
+          config: subStrategyConfig,
+          timer: state,
+          onFieldCount: gameType.onFieldCount,
+          rosterPlayerIds,
+          fieldIds,
+          benchIds,
+          unavailableIds,
+          permanentlyOutIds,
+          playtimeSeconds: playtime,
+          lastSubElapsedPlayingSeconds,
+        }),
+      ),
+    [
+      subStrategyConfig,
+      state,
+      gameType.onFieldCount,
+      rosterPlayerIds,
+      fieldIds,
+      benchIds,
+      unavailableIds,
+      permanentlyOutIds,
+      playtime,
+      lastSubElapsedPlayingSeconds,
+    ],
+  )
+
+  const recommendedSubPairs = useMemo(
+    () =>
+      recommendedSubPairsFromActions(strategy.recommendedSubs, {
+        fieldIds,
+        benchIds,
+        unavailableIds,
+        permanentlyOutIds,
+        unlimitedReturns: subStrategyConfig.unlimitedReturns,
+      }),
+    [
+      strategy.recommendedSubs,
+      fieldIds,
+      benchIds,
+      unavailableIds,
+      permanentlyOutIds,
+      subStrategyConfig.unlimitedReturns,
+    ],
+  )
+
+  useSubRecommendationBell(
+    recommendedSubPairs.length > 0,
+    state.runStatus === 'running',
+  )
+
   /** Drop on empty space in the same column: send to bottom of that list. */
   function moveToEndOfBench(playerId: string) {
     setBenchIds((b) => {
@@ -187,10 +332,15 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
   }
 
   function applyBenchToFieldDrop(fieldPlayerId: string, benchPlayerId: string) {
+    if (!canPlaceOnField(benchPlayerId)) return
     const r = swapFieldWithBench({ fieldIds, benchIds }, fieldPlayerId, benchPlayerId)
     if (!r.ok) return
     setFieldIds(r.lineup.fieldIds)
     setBenchIds(r.lineup.benchIds)
+    setPermanentlyOutIds((prev) =>
+      recordSubstitutionPermanentlyOut(prev, fieldPlayerId, subStrategyConfig),
+    )
+    setLastSubElapsedPlayingSeconds(elapsedPlayingSeconds(stateRef.current))
   }
 
   function applyFieldToFieldDrop(fieldTargetId: string, fieldSourceId: string) {
@@ -223,7 +373,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
     const draggedId = e.dataTransfer.getData('text/plain')
     if (!draggedId) return
     if (benchIds.includes(draggedId)) {
-      if (fieldIds.length < gameType.onFieldCount) {
+      if (fieldIds.length < gameType.onFieldCount && canPlaceOnField(draggedId)) {
         setBenchIds((b) => b.filter((id) => id !== draggedId))
         setFieldIds((f) => [...f, draggedId])
       }
@@ -249,7 +399,11 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
     }
 
     if (fieldIdsRef.current.includes(playerId)) return { kind: 'zone', zone }
-    if (benchIdsRef.current.includes(playerId) && fieldIdsRef.current.length < gameType.onFieldCount) {
+    if (
+      benchIdsRef.current.includes(playerId) &&
+      fieldIdsRef.current.length < gameType.onFieldCount &&
+      canPlaceOnField(playerId)
+    ) {
       return { kind: 'zone', zone }
     }
     return null
@@ -318,7 +472,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
       }
 
       if (targetZone === 'field') {
-        if (benchIdsRef.current.includes(playerId)) {
+        if (benchIdsRef.current.includes(playerId) && canPlaceOnField(playerId)) {
           applyBenchToFieldDrop(targetPlayerId, playerId)
           return
         }
@@ -344,7 +498,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
     }
 
     if (benchIdsRef.current.includes(playerId)) {
-      if (fieldIdsRef.current.length < gameType.onFieldCount) {
+      if (fieldIdsRef.current.length < gameType.onFieldCount && canPlaceOnField(playerId)) {
         setBenchIds((b) => b.filter((id) => id !== playerId))
         setFieldIds((f) => [...f, playerId])
       }
@@ -421,9 +575,11 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
   }
 
   function playerCardClassName(playerId: string) {
+    const subPending = isPlayerInRecommendedSubPair(playerId, recommendedSubPairs)
     return [
       'game-player-card',
       'game-player-card-draggable',
+      subPending ? 'game-player-card-sub-pending' : '',
       pointerDraggingPlayerId === playerId ? 'game-player-card-pointer-dragging' : '',
       pointerDropPreview?.kind === 'player' && pointerDropPreview.playerId === playerId
         ? 'game-player-card-drop-target'
@@ -538,7 +694,10 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                 type="button"
                 className="cta game-screen-primary"
                 data-testid="timer-start"
-                onClick={() => setState((s) => startMatch(s))}
+                onClick={() => {
+                  primeBoxingBellAudio()
+                  setState((s) => startMatch(s))
+                }}
               >
                 Start game
               </button>
@@ -560,7 +719,10 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                 type="button"
                 className="cta game-screen-primary"
                 data-testid="timer-resume"
-                onClick={() => setState((s) => resume(s))}
+                onClick={() => {
+                  primeBoxingBellAudio()
+                  setState((s) => resume(s))
+                }}
               >
                 Resume
               </button>
@@ -603,16 +765,40 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
         <div className="game-roster-panel" data-testid="game-roster-panel">
           <div className="game-roster-header">
             <p className="game-screen-roster-title">{roster.name}</p>
-            <button
-              type="button"
-              className="btn-secondary game-edit-roster"
-              data-testid="game-edit-roster"
-              onClick={() => setIsEditingRoster(true)}
-            >
-              Edit roster
-            </button>
+            <div className="game-roster-header-actions">
+              <button
+                type="button"
+                className="btn-secondary game-edit-roster"
+                data-testid="game-edit-strategy"
+                onClick={() => setIsEditingStrategy(true)}
+              >
+                Edit strategy
+              </button>
+              <button
+                type="button"
+                className="btn-secondary game-edit-roster"
+                data-testid="game-edit-roster"
+                onClick={() => setIsEditingRoster(true)}
+              >
+                Edit roster
+              </button>
+            </div>
           </div>
-          <div className="game-roster-columns">
+          <div
+            ref={rosterColumnsWrapRef}
+            className={[
+              'game-roster-columns-wrap',
+              recommendedSubPairs.length > 0 ? 'game-roster-columns-wrap--has-sub-swap' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            <RecommendedSubOverlay
+              pairs={recommendedSubPairs}
+              containerRef={rosterColumnsWrapRef}
+              onSwap={(offId, onId) => applyBenchToFieldDrop(offId, onId)}
+            />
+            <div className="game-roster-columns">
             <div className="game-roster-column" data-testid="bench-list" data-game-roster-zone="bench">
               <p className="game-roster-column-title">Bench</p>
               <div
@@ -632,7 +818,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                     e.dataTransfer.dropEffect = 'move'
                   }}
                 >
-                  {benchIds.map((id) => {
+                  {displayBenchIds.map((id) => {
                     const p = playerById.get(id)
                     if (!p) return null
                     const sec = playtime[id] ?? 0
@@ -662,7 +848,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                           const draggedId = e.dataTransfer.getData('text/plain')
                           if (!draggedId || draggedId === id) return
                           if (fieldIds.includes(draggedId)) {
-                            applyBenchToFieldDrop(draggedId, id)
+                            if (canPlaceOnField(id)) applyBenchToFieldDrop(draggedId, id)
                             return
                           }
                           if (benchIds.includes(draggedId)) {
@@ -675,11 +861,6 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                             <span className="game-roster-player-text">{playerLabel(p)}</span>
                             <span className="game-player-time game-player-time-bench">
                               {formatClock(Math.floor(sec))}
-                            </span>
-                          </div>
-                          <div className="game-player-card-actions">
-                            <span className="game-player-drag-affordance" aria-hidden>
-                              ⠿
                             </span>
                           </div>
                         </div>
@@ -715,7 +896,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
               </div>
             </div>
             <div className="game-roster-column" data-testid="on-field-list" data-game-roster-zone="field">
-              <p className="game-roster-column-title">On field</p>
+              <p className="game-roster-column-title-right-aligned">On field</p>
               <div
                 className={columnDropClassName('field')}
                 data-testid="on-field-column-drop"
@@ -733,7 +914,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                     e.dataTransfer.dropEffect = 'move'
                   }}
                 >
-                  {fieldIds.map((id) => {
+                  {displayFieldIds.map((id) => {
                     const p = playerById.get(id)
                     if (!p) return null
                     const sec = playtime[id] ?? 0
@@ -762,7 +943,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                           e.stopPropagation()
                           const draggedId = e.dataTransfer.getData('text/plain')
                           if (!draggedId) return
-                          if (benchIds.includes(draggedId)) {
+                          if (benchIds.includes(draggedId) && canPlaceOnField(draggedId)) {
                             applyBenchToFieldDrop(id, draggedId)
                             return
                           }
@@ -779,11 +960,6 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                               data-testid={`player-on-field-seconds-${id}`}
                             >
                               {formatClock(Math.floor(sec))}
-                            </span>
-                          </div>
-                          <div className="game-player-card-actions">
-                            <span className="game-player-drag-affordance" aria-hidden>
-                              ⠿
                             </span>
                           </div>
                         </div>
@@ -818,6 +994,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                 />
               </div>
             </div>
+            </div>
           </div>
         </div>
       ) : (
@@ -833,6 +1010,27 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
         </div>
       )}
 
+      {isEditingStrategy && roster ? (
+        <div className="game-roster-editor-backdrop" role="presentation">
+          <section
+            className="game-roster-editor-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="game-strategy-editor-title"
+          >
+            <h2 id="game-strategy-editor-title" className="sr-only">
+              Edit substitution strategy
+            </h2>
+            <SubStrategyEditor
+              config={subStrategyConfig}
+              onConfigChange={onConfigChange}
+              onBack={() => setIsEditingStrategy(false)}
+              backLabel="Back to game"
+            />
+          </section>
+        </div>
+      ) : null}
+
       {isEditingRoster && roster ? (
         <div className="game-roster-editor-backdrop" role="presentation">
           <section
@@ -846,6 +1044,8 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
             </h2>
             <RosterEditor
               rosterId={rosterId}
+              unavailableIds={unavailableIds}
+              onUnavailableChange={onUnavailableChange}
               onBack={() => setIsEditingRoster(false)}
               onChanged={refreshRosterAfterEdit}
               backLabel="Back to game"

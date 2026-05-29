@@ -7,11 +7,19 @@ type Step = { kind: 'name' } | { kind: 'edit'; rosterId: string }
 
 export type SetUpRosterProps = {
   gameType: GameTypeRecord
+  unavailableIds: string[]
+  onUnavailableChange: (ids: string[]) => void
   onBack: () => void
   onComplete: (rosterId: string) => void
 }
 
-export default function SetUpRoster({ gameType, onBack, onComplete }: SetUpRosterProps) {
+export default function SetUpRoster({
+  gameType,
+  unavailableIds,
+  onUnavailableChange,
+  onBack,
+  onComplete,
+}: SetUpRosterProps) {
   const [step, setStep] = useState<Step>({ kind: 'name' })
   const [newRosterName, setNewRosterName] = useState('')
   const [formMessage, setFormMessage] = useState<string | null>(null)
@@ -33,6 +41,8 @@ export default function SetUpRoster({ gameType, onBack, onComplete }: SetUpRoste
     return (
       <RosterEditor
         rosterId={step.rosterId}
+        unavailableIds={unavailableIds}
+        onUnavailableChange={onUnavailableChange}
         onBack={onBack}
         onChanged={() => {}}
         backLabel="Back to game types"

@@ -331,7 +331,7 @@ h1 {
   border: 1px solid #475569;
   border-radius: 0.5rem;
   padding: 0.55rem 1rem;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: #e2e8f0;
   background: rgba(30, 41, 59, 0.9);
@@ -702,10 +702,22 @@ h1 {
 
 .roster-player-card-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.65rem;
   min-width: 0;
+}
+
+.roster-player-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.roster-availability-hint {
+  margin: 0 0 0.75rem;
 }
 
 .roster-player-line {
@@ -821,11 +833,22 @@ h1 {
   margin-bottom: 0;
 }
 
+.game-roster-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
 .game-edit-roster {
   width: auto;
   flex: 0 0 auto;
   padding: 0.4rem 0.65rem;
   font-size: 0.78rem;
+}
+
+.sub-strategy-editor {
+  width: 100%;
 }
 
 .game-roster-editor-backdrop {
@@ -851,6 +874,54 @@ h1 {
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
 }
 
+.game-roster-columns-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: min(52vh, 22rem);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.game-roster-columns-wrap .game-roster-columns {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.game-roster-columns-wrap--has-sub-swap .game-roster-columns {
+  gap: 3.25rem;
+}
+
+.game-recommended-sub-swap-btn {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 2px solid #38bdf8;
+  border-radius: 50%;
+  background: #0c4a6e;
+  color: #e0f2fe;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+  pointer-events: auto;
+}
+
+.game-recommended-sub-swap-btn:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+
+.game-recommended-sub-swap-icon {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .game-roster-columns {
   flex: 1 1 auto;
   min-height: min(52vh, 22rem);
@@ -858,6 +929,11 @@ h1 {
   grid-template-columns: 1fr 1fr;
   gap: 0.65rem;
   align-items: stretch;
+}
+
+.game-player-card-sub-pending {
+  outline: 2px solid #38bdf8;
+  outline-offset: 1px;
 }
 
 .game-lineup-warning {
@@ -897,6 +973,17 @@ h1 {
 }
 
 .game-roster-column-title {
+  flex-shrink: 0;
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.game-roster-column-title-right-aligned {
+  text-align: right;
   flex-shrink: 0;
   margin: 0 0 0.35rem;
   font-size: 0.75rem;
@@ -1086,4 +1173,174 @@ h1 {
 
 .set-up-roster {
   width: 100%;
+}
+
+.sub-strategy-setup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.sub-strategy-form .field + .toggle-switch {
+  margin-top: 0.5rem;
+}
+
+.sub-strategy-rules-fieldset {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+}
+
+.sub-strategy-rules-legend {
+  padding: 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.sub-strategy-rule-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.sub-strategy-rule-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.sub-strategy-rule-row .toggle-switch {
+  justify-self: center;
+}
+
+.sub-strategy-rule-row .toggle-switch-label:empty {
+  display: none;
+}
+
+.sub-strategy-rule-end-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.sub-strategy-rule-end-label-active {
+  color: #e2e8f0;
+}
+
+.sub-strategy-rule-row .sub-strategy-rule-end-label:first-child {
+  text-align: right;
+}
+
+.sub-strategy-rule-row .sub-strategy-rule-end-label:last-child {
+  text-align: left;
+}
+
+.sub-strategy-stoppage-mean {
+  margin-top: 0.75rem;
+}
+
+.sub-strategy-stoppage-mean-input {
+  width: 5rem;
+  margin-top: 0.35rem;
+}
+
+.sub-strategy-tolerance-slider {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.sub-strategy-tolerance-slider input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.sub-strategy-tolerance-end-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.sub-strategy-unavailable-fieldset {
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+}
+
+.sub-strategy-unavailable-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.toggle-switch-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toggle-switch-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.toggle-switch-track {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #334155;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.toggle-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: #e2e8f0;
+  transition: transform 0.15s ease;
+}
+
+.toggle-switch-input:focus-visible + .toggle-switch-track {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+.toggle-switch-input:checked + .toggle-switch-track {
+  background: #0369a1;
+}
+
+.toggle-switch-input:checked + .toggle-switch-track::after {
+  transform: translateX(1.25rem);
 }

@@ -1,12 +1,12 @@
 ---
-description: 
+
+## description: 
 alwaysApply: true
----
 
 ---
-description: 
+
+## description: 
 alwaysApply: true
----
 
 ## Tests are Sacred
 
@@ -40,7 +40,7 @@ Required sequence:
 2. **Review gate:** show the test changes and summarize what they assert; wait for maintainer approval before moving onto functionality.
 3. **Implementation:** once tests are approved, add or change functionality code until `npm test` and (when UI behavior is involved) `npm run test:e2e` pass.
 
-## ommands
+## Commands
 
 
 | Command            | Purpose                           |
@@ -50,3 +50,4 @@ Required sequence:
 
 
 ---
+
