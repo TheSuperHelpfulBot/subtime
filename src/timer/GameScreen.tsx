@@ -21,11 +21,19 @@ import {
   type PlaytimeSeconds,
 } from './substitutionPlaytime'
 import { syncLineupWithRoster } from './rosterLineupSync'
+import { sortIdsByPlaytime } from './gameLineupDisplay'
 import {
-  getTopRecommendedSubPair,
-  sortIdsByPlaytime,
-} from './gameLineupDisplay'
+  isPlayerInRecommendedSubPair,
+  recommendedSubPairsFromActions,
+} from './recommendedSubPairs'
+import { buildGameState } from './subStrategy/buildGameState'
+import { calculateStrategy } from './subStrategy/calculateStrategy'
+import { elapsedPlayingSeconds } from './elapsedPlayingTime'
+import { recordSubstitutionPermanentlyOut } from './subStrategy/recordSubstitution'
 import RecommendedSubOverlay from './RecommendedSubOverlay'
+import { primeBoxingBellAudio } from './boxingBell'
+import { useScreenWakeLockForTimer } from './useScreenWakeLockForTimer'
+import { useSubRecommendationBell } from './useSubRecommendationBell'
 import SubStrategyEditor from './SubStrategyEditor'
 import {
   applyUnavailableToLineup,
@@ -106,6 +114,8 @@ export default function GameScreen({
   const stateRef = useRef<GameTimerState>(state)
   stateRef.current = state
 
+  useScreenWakeLockForTimer(state.runStatus)
+
   const [roster, setRoster] = useState<RosterRecord | null>(() => getRosterById(rosterId))
   const [isEditingRoster, setIsEditingRoster] = useState(false)
   const [isEditingStrategy, setIsEditingStrategy] = useState(false)
@@ -134,6 +144,11 @@ export default function GameScreen({
   const [pointerDraggingPlayerId, setPointerDraggingPlayerId] = useState<string | null>(null)
   const [pointerDropPreview, setPointerDropPreview] = useState<PointerDropPreview>(null)
 
+  const [permanentlyOutIds, setPermanentlyOutIds] = useState<string[]>([])
+  const [lastSubElapsedPlayingSeconds, setLastSubElapsedPlayingSeconds] = useState<number | null>(
+    null,
+  )
+
   const [playtime, setPlaytime] = useState<PlaytimeSeconds>(() =>
     createZeroPlaytime(getRosterById(rosterId)?.players.map((p) => p.id) ?? []),
   )
@@ -144,12 +159,15 @@ export default function GameScreen({
   const subStrategyConfigRef = useRef(subStrategyConfig)
   subStrategyConfigRef.current = subStrategyConfig
 
+  const permanentlyOutIdsRef = useRef(permanentlyOutIds)
+  permanentlyOutIdsRef.current = permanentlyOutIds
+
   function canPlaceOnField(playerId: string): boolean {
     return isEligibleForField(
       playerId,
       unavailableIdsRef.current,
-      [],
-      subStrategyConfigRef.current.rollingSubsAllowed,
+      permanentlyOutIdsRef.current,
+      subStrategyConfigRef.current.unlimitedReturns,
     )
   }
 
@@ -165,6 +183,8 @@ export default function GameScreen({
       setFieldIds(enforced.fieldIds)
       setBenchIds(enforced.benchIds)
       setPlaytime(createZeroPlaytime(ids))
+      setPermanentlyOutIds([])
+      setLastSubElapsedPlayingSeconds(null)
     } else {
       setBenchIds([])
       setFieldIds([])
@@ -173,14 +193,20 @@ export default function GameScreen({
   }, [gameType.id, gameType.onFieldCount, rosterId])
 
   useEffect(() => {
-    const enforced = applyUnavailableToLineup(
-      fieldIdsRef.current,
-      benchIdsRef.current,
+    const rosterPlayerIds = roster?.players.map((p) => p.id) ?? []
+    if (rosterPlayerIds.length === 0) return
+
+    const synced = syncLineupWithRoster({
+      fieldIds: fieldIdsRef.current,
+      benchIds: benchIdsRef.current,
+      playtime: playtimeRef.current,
+      rosterPlayerIds,
       unavailableIds,
-    )
-    setFieldIds(enforced.fieldIds)
-    setBenchIds(enforced.benchIds)
-  }, [unavailableIds])
+    })
+    setFieldIds(synced.fieldIds)
+    setBenchIds(synced.benchIds)
+    setPlaytime(synced.playtime)
+  }, [unavailableIds, roster])
 
   function refreshRosterAfterEdit() {
     const nextRoster = getRosterById(rosterId)
@@ -236,12 +262,59 @@ export default function GameScreen({
     () => sortIdsByPlaytime(fieldIds, playtime, 'desc'),
     [fieldIds, playtime],
   )
-  const topSubPair = useMemo(() => {
-    const pair = getTopRecommendedSubPair(fieldIds, benchIds, playtime)
-    if (!pair) return null
-    if (!canPlaceOnField(pair.onId)) return null
-    return pair
-  }, [fieldIds, benchIds, playtime, unavailableIds, subStrategyConfig.rollingSubsAllowed])
+  const strategy = useMemo(
+    () =>
+      calculateStrategy(
+        buildGameState({
+          config: subStrategyConfig,
+          timer: state,
+          onFieldCount: gameType.onFieldCount,
+          rosterPlayerIds,
+          fieldIds,
+          benchIds,
+          unavailableIds,
+          permanentlyOutIds,
+          playtimeSeconds: playtime,
+          lastSubElapsedPlayingSeconds,
+        }),
+      ),
+    [
+      subStrategyConfig,
+      state,
+      gameType.onFieldCount,
+      rosterPlayerIds,
+      fieldIds,
+      benchIds,
+      unavailableIds,
+      permanentlyOutIds,
+      playtime,
+      lastSubElapsedPlayingSeconds,
+    ],
+  )
+
+  const recommendedSubPairs = useMemo(
+    () =>
+      recommendedSubPairsFromActions(strategy.recommendedSubs, {
+        fieldIds,
+        benchIds,
+        unavailableIds,
+        permanentlyOutIds,
+        unlimitedReturns: subStrategyConfig.unlimitedReturns,
+      }),
+    [
+      strategy.recommendedSubs,
+      fieldIds,
+      benchIds,
+      unavailableIds,
+      permanentlyOutIds,
+      subStrategyConfig.unlimitedReturns,
+    ],
+  )
+
+  useSubRecommendationBell(
+    recommendedSubPairs.length > 0,
+    state.runStatus === 'running',
+  )
 
   /** Drop on empty space in the same column: send to bottom of that list. */
   function moveToEndOfBench(playerId: string) {
@@ -264,6 +337,10 @@ export default function GameScreen({
     if (!r.ok) return
     setFieldIds(r.lineup.fieldIds)
     setBenchIds(r.lineup.benchIds)
+    setPermanentlyOutIds((prev) =>
+      recordSubstitutionPermanentlyOut(prev, fieldPlayerId, subStrategyConfig),
+    )
+    setLastSubElapsedPlayingSeconds(elapsedPlayingSeconds(stateRef.current))
   }
 
   function applyFieldToFieldDrop(fieldTargetId: string, fieldSourceId: string) {
@@ -498,9 +575,7 @@ export default function GameScreen({
   }
 
   function playerCardClassName(playerId: string) {
-    const subPending =
-      topSubPair !== null &&
-      (playerId === topSubPair.offId || playerId === topSubPair.onId)
+    const subPending = isPlayerInRecommendedSubPair(playerId, recommendedSubPairs)
     return [
       'game-player-card',
       'game-player-card-draggable',
@@ -619,7 +694,10 @@ export default function GameScreen({
                 type="button"
                 className="cta game-screen-primary"
                 data-testid="timer-start"
-                onClick={() => setState((s) => startMatch(s))}
+                onClick={() => {
+                  primeBoxingBellAudio()
+                  setState((s) => startMatch(s))
+                }}
               >
                 Start game
               </button>
@@ -641,7 +719,10 @@ export default function GameScreen({
                 type="button"
                 className="cta game-screen-primary"
                 data-testid="timer-resume"
-                onClick={() => setState((s) => resume(s))}
+                onClick={() => {
+                  primeBoxingBellAudio()
+                  setState((s) => resume(s))
+                }}
               >
                 Resume
               </button>
@@ -707,13 +788,13 @@ export default function GameScreen({
             ref={rosterColumnsWrapRef}
             className={[
               'game-roster-columns-wrap',
-              topSubPair ? 'game-roster-columns-wrap--has-sub-swap' : '',
+              recommendedSubPairs.length > 0 ? 'game-roster-columns-wrap--has-sub-swap' : '',
             ]
               .filter(Boolean)
               .join(' ')}
           >
             <RecommendedSubOverlay
-              pair={topSubPair}
+              pairs={recommendedSubPairs}
               containerRef={rosterColumnsWrapRef}
               onSwap={(offId, onId) => applyBenchToFieldDrop(offId, onId)}
             />
@@ -815,7 +896,7 @@ export default function GameScreen({
               </div>
             </div>
             <div className="game-roster-column" data-testid="on-field-list" data-game-roster-zone="field">
-              <p className="game-roster-column-title">On field</p>
+              <p className="game-roster-column-title-right-aligned">On field</p>
               <div
                 className={columnDropClassName('field')}
                 data-testid="on-field-column-drop"
