@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
+import { completeStrategySetup } from './helpers/strategySetup'
 
 type Point = { x: number; y: number }
 
@@ -29,6 +30,7 @@ async function createGame(page: Page, uniqueName: string, playersOnField = 2) {
   }
 
   await page.getByTestId('roster-continue-to-game').click()
+  await completeStrategySetup(page)
   await expect(page.getByTestId('game-screen')).toBeVisible()
 }
 

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { completeStrategySetup } from './helpers/strategySetup'
 
 test.describe('player rosters', () => {
   test('create roster, add player, survives reload; visible on game screen', async ({
@@ -36,6 +37,7 @@ test.describe('player rosters', () => {
     await expect(page.getByTestId('roster-players-list')).toContainText('14')
 
     await page.getByTestId('roster-continue-to-game').click()
+    await completeStrategySetup(page)
 
     await expect(page.getByTestId('game-roster-panel')).toContainText(rosterName)
     await expect(page.getByTestId('on-field-list')).toContainText('Jordan')
@@ -60,6 +62,7 @@ test.describe('player rosters', () => {
       .filter({ hasText: rosterName })
       .getByRole('button', { name: /use for this game/i })
       .click()
+    await completeStrategySetup(page)
 
     await expect(page.getByTestId('game-roster-panel')).toContainText(rosterName)
     await expect(page.getByTestId('on-field-list')).toContainText('Jordan')

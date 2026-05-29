@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { completeStrategySetup } from './helpers/strategySetup'
 
 /**
  * HTML5 drag-and-drop onto empty column chrome is flaky under Playwright’s iPhone 12 profile (touch emulation).
@@ -34,6 +35,7 @@ test.describe('substitutions · column chrome drop', () => {
     }
 
     await page.getByTestId('roster-continue-to-game').click()
+    await completeStrategySetup(page)
     await page.getByTestId('timer-start').click()
 
     const fieldCards = page.getByTestId('on-field-list').locator('[data-testid^="game-player-field-"]')

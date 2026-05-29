@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
+import { completeStrategySetup } from './helpers/strategySetup'
 
 async function createRunningGame(page: Page, uniqueName: string) {
   await page.goto('./')
@@ -27,6 +28,7 @@ async function createRunningGame(page: Page, uniqueName: string) {
   }
 
   await page.getByTestId('roster-continue-to-game').click()
+  await completeStrategySetup(page)
   await page.getByTestId('timer-start').click()
   await expect(page.getByTestId('timer-pause')).toBeVisible()
 }
