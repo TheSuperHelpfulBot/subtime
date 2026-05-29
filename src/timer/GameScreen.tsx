@@ -22,6 +22,11 @@ import {
 } from './substitutionPlaytime'
 import { syncLineupWithRoster } from './rosterLineupSync'
 import {
+  getTopRecommendedSubPair,
+  sortIdsByPlaytime,
+} from './gameLineupDisplay'
+import RecommendedSubOverlay from './RecommendedSubOverlay'
+import {
   createIdleState,
   formatClock,
   pause,
@@ -106,6 +111,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
   fieldIdsRef.current = fieldIds
   const benchIdsRef = useRef(benchIds)
   benchIdsRef.current = benchIds
+  const rosterColumnsWrapRef = useRef<HTMLDivElement>(null)
   const pointerDragRef = useRef<PointerDragSession | null>(null)
   const cleanupPointerDragRef = useRef<(() => void) | null>(null)
   const [pointerDraggingPlayerId, setPointerDraggingPlayerId] = useState<string | null>(null)
@@ -170,6 +176,19 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
   )
 
   const lineupReady = isStartingLineupComplete(fieldIds.length, gameType.onFieldCount)
+
+  const displayBenchIds = useMemo(
+    () => sortIdsByPlaytime(benchIds, playtime, 'asc'),
+    [benchIds, playtime],
+  )
+  const displayFieldIds = useMemo(
+    () => sortIdsByPlaytime(fieldIds, playtime, 'desc'),
+    [fieldIds, playtime],
+  )
+  const topSubPair = useMemo(
+    () => getTopRecommendedSubPair(fieldIds, benchIds, playtime),
+    [fieldIds, benchIds, playtime],
+  )
 
   /** Drop on empty space in the same column: send to bottom of that list. */
   function moveToEndOfBench(playerId: string) {
@@ -421,9 +440,13 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
   }
 
   function playerCardClassName(playerId: string) {
+    const subPending =
+      topSubPair !== null &&
+      (playerId === topSubPair.offId || playerId === topSubPair.onId)
     return [
       'game-player-card',
       'game-player-card-draggable',
+      subPending ? 'game-player-card-sub-pending' : '',
       pointerDraggingPlayerId === playerId ? 'game-player-card-pointer-dragging' : '',
       pointerDropPreview?.kind === 'player' && pointerDropPreview.playerId === playerId
         ? 'game-player-card-drop-target'
@@ -612,7 +635,21 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
               Edit roster
             </button>
           </div>
-          <div className="game-roster-columns">
+          <div
+            ref={rosterColumnsWrapRef}
+            className={[
+              'game-roster-columns-wrap',
+              topSubPair ? 'game-roster-columns-wrap--has-sub-swap' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            <RecommendedSubOverlay
+              pair={topSubPair}
+              containerRef={rosterColumnsWrapRef}
+              onSwap={(offId, onId) => applyBenchToFieldDrop(offId, onId)}
+            />
+            <div className="game-roster-columns">
             <div className="game-roster-column" data-testid="bench-list" data-game-roster-zone="bench">
               <p className="game-roster-column-title">Bench</p>
               <div
@@ -632,7 +669,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                     e.dataTransfer.dropEffect = 'move'
                   }}
                 >
-                  {benchIds.map((id) => {
+                  {displayBenchIds.map((id) => {
                     const p = playerById.get(id)
                     if (!p) return null
                     const sec = playtime[id] ?? 0
@@ -675,11 +712,6 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                             <span className="game-roster-player-text">{playerLabel(p)}</span>
                             <span className="game-player-time game-player-time-bench">
                               {formatClock(Math.floor(sec))}
-                            </span>
-                          </div>
-                          <div className="game-player-card-actions">
-                            <span className="game-player-drag-affordance" aria-hidden>
-                              ⠿
                             </span>
                           </div>
                         </div>
@@ -733,7 +765,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                     e.dataTransfer.dropEffect = 'move'
                   }}
                 >
-                  {fieldIds.map((id) => {
+                  {displayFieldIds.map((id) => {
                     const p = playerById.get(id)
                     if (!p) return null
                     const sec = playtime[id] ?? 0
@@ -781,11 +813,6 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                               {formatClock(Math.floor(sec))}
                             </span>
                           </div>
-                          <div className="game-player-card-actions">
-                            <span className="game-player-drag-affordance" aria-hidden>
-                              ⠿
-                            </span>
-                          </div>
                         </div>
                         <div className="game-player-card-meter" aria-hidden>
                           <div
@@ -817,6 +844,7 @@ export default function GameScreen({ gameType, rosterId, onLeave }: GameScreenPr
                   }}
                 />
               </div>
+            </div>
             </div>
           </div>
         </div>

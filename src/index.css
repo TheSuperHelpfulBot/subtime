@@ -851,6 +851,54 @@ h1 {
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
 }
 
+.game-roster-columns-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: min(52vh, 22rem);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.game-roster-columns-wrap .game-roster-columns {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.game-roster-columns-wrap--has-sub-swap .game-roster-columns {
+  gap: 3.25rem;
+}
+
+.game-recommended-sub-swap-btn {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 2px solid #38bdf8;
+  border-radius: 50%;
+  background: #0c4a6e;
+  color: #e0f2fe;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+  pointer-events: auto;
+}
+
+.game-recommended-sub-swap-btn:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+
+.game-recommended-sub-swap-icon {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .game-roster-columns {
   flex: 1 1 auto;
   min-height: min(52vh, 22rem);
@@ -858,6 +906,11 @@ h1 {
   grid-template-columns: 1fr 1fr;
   gap: 0.65rem;
   align-items: stretch;
+}
+
+.game-player-card-sub-pending {
+  outline: 2px solid #38bdf8;
+  outline-offset: 1px;
 }
 
 .game-lineup-warning {
