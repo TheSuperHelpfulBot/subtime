@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { completeStrategySetup } from './helpers/strategySetup'
 
 test.describe('game timer', () => {
   test('select game type, start match, pause, resume, skip, return to list', async ({
@@ -28,6 +29,7 @@ test.describe('game timer', () => {
     await page.getByTestId('player-shirt-input').fill('7')
     await page.getByTestId('add-player-submit').click()
     await page.getByTestId('roster-continue-to-game').click()
+    await completeStrategySetup(page)
 
     await expect(page.getByTestId('game-screen')).toBeVisible()
     await expect(page.getByTestId('game-roster-panel')).toBeVisible()

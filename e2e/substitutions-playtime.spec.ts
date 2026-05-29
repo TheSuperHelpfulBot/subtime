@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { completeStrategySetup } from './helpers/strategySetup'
 
 test.describe('substitutions and playtime (Milestone 7)', () => {
   test('warns when fewer than expected on field but Start stays enabled', async ({ page }) => {
@@ -31,6 +32,7 @@ test.describe('substitutions and playtime (Milestone 7)', () => {
     await page.getByTestId('add-player-submit').click()
 
     await page.getByTestId('roster-continue-to-game').click()
+    await completeStrategySetup(page)
     await expect(page.getByTestId('game-screen')).toBeVisible()
 
     await expect(page.getByTestId('lineup-count-warning')).toContainText(/expected 3 on field/i)
@@ -70,6 +72,7 @@ test.describe('substitutions and playtime (Milestone 7)', () => {
     }
 
     await page.getByTestId('roster-continue-to-game').click()
+    await completeStrategySetup(page)
     await expect(page.getByTestId('game-screen')).toBeVisible()
 
     await page.getByTestId('timer-start').click()
@@ -130,6 +133,7 @@ test.describe('substitutions and playtime (Milestone 7)', () => {
     }
 
     await page.getByTestId('roster-continue-to-game').click()
+    await completeStrategySetup(page)
 
     await page.getByTestId('timer-start').click()
 
