@@ -26,7 +26,7 @@ export default function SubStrategyEditor({
       </button>
       <h2 className="roster-editor-title">Substitution strategy</h2>
       <p className="roster-editor-hint">
-        Adjust fairness tolerance, sub windows, and rolling substitution rules.
+        Adjust substitution fairness, sub windows, and rolling substitution rules.
       </p>
       <SubStrategyFormFields
         config={config}

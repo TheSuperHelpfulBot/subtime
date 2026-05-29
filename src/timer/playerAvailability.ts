@@ -33,10 +33,10 @@ export function isEligibleForField(
   playerId: string,
   unavailableIds: readonly string[],
   permanentlyOutIds: readonly string[],
-  rollingSubsAllowed: boolean,
+  unlimitedReturns: boolean,
 ): boolean {
   if (isPlayerUnavailable(playerId, unavailableIds)) return false
-  if (!rollingSubsAllowed && permanentlyOutIds.includes(playerId)) return false
+  if (!unlimitedReturns && permanentlyOutIds.includes(playerId)) return false
   return true
 }
 

@@ -76,6 +76,7 @@ export default function App() {
   }
 
   function startGameFromList(gameType: GameTypeRecord) {
+    setUnavailablePlayerIds([])
     setPendingGameType(gameType)
     if (getRosters().length > 0) {
       setPhase('rosterPick')
@@ -89,7 +90,6 @@ export default function App() {
     setActiveGameType(gameType)
     setActiveRosterId(rosterId)
     setSubStrategyConfig(DEFAULT_SUB_STRATEGY_CONFIG)
-    setUnavailablePlayerIds([])
     setPhase('strategySetup')
   }
 

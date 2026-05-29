@@ -1,9 +1,14 @@
 import { useLayoutEffect, useState, type RefObject } from 'react'
+import type { RecommendedSubPair } from './recommendedSubPairs'
 
 export type RecommendedSubOverlayProps = {
-  pair: { offId: string; onId: string } | null
+  pairs: RecommendedSubPair[]
   onSwap: (offId: string, onId: string) => void
   containerRef: RefObject<HTMLElement | null>
+}
+
+function pairKey(pair: RecommendedSubPair): string {
+  return `${pair.offId}:${pair.onId}`
 }
 
 function playerCardInContainer(container: HTMLElement, playerId: string): HTMLElement | null {
@@ -33,54 +38,101 @@ function measurePairCenterY(
 }
 
 export default function RecommendedSubOverlay({
-  pair,
+  pairs,
   onSwap,
   containerRef,
 }: RecommendedSubOverlayProps) {
-  const [centerY, setCenterY] = useState<number | null>(null)
+  const [centerYByKey, setCenterYByKey] = useState<Record<string, number>>({})
+
+  const pairsKey = pairs.map(pairKey).join('|')
 
   useLayoutEffect(() => {
-    if (!pair) {
-      setCenterY(null)
+    if (pairs.length === 0) {
+      setCenterYByKey({})
       return
     }
 
-    const container = containerRef.current
-    if (!container) return
+    let cancelled = false
 
     const update = () => {
-      setCenterY(measurePairCenterY(container, pair.offId, pair.onId))
+      if (cancelled) return
+      const container = containerRef.current
+      if (!container) return
+
+      const next: Record<string, number> = {}
+      for (const pair of pairs) {
+        const y = measurePairCenterY(container, pair.offId, pair.onId)
+        if (y !== null) next[pairKey(pair)] = y
+      }
+      setCenterYByKey(next)
     }
 
     update()
 
-    if (typeof ResizeObserver === 'undefined') return
+    let resizeObserver: ResizeObserver | undefined
+    const connectObserver = () => {
+      const container = containerRef.current
+      if (!container || typeof ResizeObserver === 'undefined') return
 
-    const resizeObserver = new ResizeObserver(update)
-    resizeObserver.observe(container)
+      resizeObserver = new ResizeObserver(update)
+      resizeObserver.observe(container)
 
-    const fieldCard = playerCardInContainer(container, pair.offId)
-    const benchCard = playerCardInContainer(container, pair.onId)
-    if (fieldCard) resizeObserver.observe(fieldCard)
-    if (benchCard) resizeObserver.observe(benchCard)
+      const observed = new Set<HTMLElement>()
+      for (const pair of pairs) {
+        for (const id of [pair.offId, pair.onId]) {
+          const card = playerCardInContainer(container, id)
+          if (card && !observed.has(card)) {
+            observed.add(card)
+            resizeObserver.observe(card)
+          }
+        }
+      }
+    }
 
-    return () => resizeObserver.disconnect()
-  }, [pair, containerRef])
+    if (containerRef.current) {
+      connectObserver()
+    } else {
+      const frameId = requestAnimationFrame(() => {
+        update()
+        connectObserver()
+      })
+      return () => {
+        cancelled = true
+        cancelAnimationFrame(frameId)
+        resizeObserver?.disconnect()
+      }
+    }
 
-  if (!pair || centerY === null) return null
+    return () => {
+      cancelled = true
+      resizeObserver?.disconnect()
+    }
+  }, [pairsKey, containerRef])
+
+  if (pairs.length === 0) return null
 
   return (
-    <button
-      type="button"
-      className="game-recommended-sub-swap-btn"
-      data-testid="game-recommended-sub-swap"
-      aria-label="Swap recommended players"
-      style={{ top: centerY }}
-      onClick={() => onSwap(pair.offId, pair.onId)}
-    >
-      <span className="game-recommended-sub-swap-icon" aria-hidden>
-        ↔
-      </span>
-    </button>
+    <>
+      {pairs.map((pair, index) => {
+        const y = centerYByKey[pairKey(pair)]
+        if (y === undefined) return null
+
+        return (
+          <button
+            key={pairKey(pair)}
+            type="button"
+            className="game-recommended-sub-swap-btn"
+            data-testid={index === 0 ? 'game-recommended-sub-swap' : `game-recommended-sub-swap-${index}`}
+            aria-label="Swap recommended players"
+            style={{ top: y }}
+            onClick={() => onSwap(pair.offId, pair.onId)}
+          >
+            <span className="game-recommended-sub-swap-icon" aria-hidden>
+              ↔
+            </span>
+          </button>
+        )
+      })}
+    </>
   )
 }

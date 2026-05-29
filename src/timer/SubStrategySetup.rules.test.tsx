@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import SubStrategySetup from './SubStrategySetup'
 import type { GameTypeRecord } from '../storage/gameTypesStorage'
 import { saveRoster } from '../storage/rosterStorage'
-import SubStrategySetup from './SubStrategySetup'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 const GAME_TYPE: GameTypeRecord = {
   id: 'gt-1',
@@ -22,29 +21,20 @@ describe('SubStrategySetup', () => {
     rosterId = saved.roster.id
   })
 
-  it('calls onStartGame with config only', async () => {
-    const user = userEvent.setup()
-    let captured: unknown = null
-
+  it('renders substitution rules and fairness defaults', () => {
     render(
       <SubStrategySetup
         gameType={GAME_TYPE}
         rosterId={rosterId}
         onBack={() => {}}
-        onStartGame={(config) => {
-          captured = config
-        }}
+        onStartGame={() => {}}
       />,
     )
-
-    await user.click(screen.getByTestId('strategy-start-game'))
-
-    expect(captured).toMatchObject({
-      toleranceFactor: 0,
-      rotationFrequencyFactor: 5,
-      unlimitedReturns: true,
-      stoppageOnly: false,
-      meanStoppageIntervalSeconds: 60,
-    })
+    expect(screen.getByRole('heading', { name: /substitution strategy/i })).toBeInTheDocument()
+    expect(screen.getByText('Substitution rules')).toBeInTheDocument()
+    expect(screen.getByTestId('strategy-tolerance')).toHaveValue('0')
+    expect(screen.getByTestId('strategy-rotation-frequency')).toHaveValue('5')
+    expect(screen.getByTestId('strategy-unlimited-returns')).toBeChecked()
+    expect(screen.queryByTestId('strategy-stoppage-mean-slider')).not.toBeInTheDocument()
   })
 })

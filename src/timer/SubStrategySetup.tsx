@@ -38,8 +38,6 @@ export default function SubStrategySetup({
     )
   }
 
-  const intervalValid = config.subWindowIntervalSeconds >= 60
-
   return (
     <div className="sub-strategy-setup" data-testid="sub-strategy-setup">
       <h1 className="timer-config-title">Substitution strategy</h1>
@@ -58,7 +56,6 @@ export default function SubStrategySetup({
           type="button"
           className="cta"
           data-testid="strategy-start-game"
-          disabled={!intervalValid}
           onClick={() => onStartGame(config)}
         >
           Start game
