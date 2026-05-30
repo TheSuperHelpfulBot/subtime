@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { selectSavedGameType } from './helpers/navigation'
 import { completeStrategySetup } from './helpers/strategySetup'
 
 test.describe('game timer', () => {
@@ -18,7 +19,7 @@ test.describe('game timer', () => {
     await page.getByRole('button', { name: /save game type/i }).click()
 
     await expect(page.getByRole('heading', { name: /load saved game type/i })).toBeVisible()
-    await page.getByRole('button', { name: /^start game$/i }).click()
+    await selectSavedGameType(page, uniqueName)
 
     await expect(page.getByTestId('set-up-roster-screen')).toBeVisible()
     await page.getByTestId('roster-name-input').fill(`Roster ${uniqueName}`)

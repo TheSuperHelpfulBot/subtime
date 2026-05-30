@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { selectSavedGameType, selectSavedRoster } from './helpers/navigation'
 import { completeStrategySetup } from './helpers/strategySetup'
 
 test.describe('player rosters', () => {
@@ -17,12 +18,7 @@ test.describe('player rosters', () => {
 
     await expect(page.getByRole('heading', { name: /load saved game type/i })).toBeVisible()
 
-    await page
-      .getByTestId('saved-game-types')
-      .locator('li')
-      .filter({ hasText: gameTypeName })
-      .getByRole('button', { name: /start game/i })
-      .click()
+    await selectSavedGameType(page, gameTypeName)
 
     await expect(page.getByTestId('set-up-roster-screen')).toBeVisible()
 
@@ -46,22 +42,12 @@ test.describe('player rosters', () => {
     await page.getByRole('button', { name: /get started/i }).click()
     await expect(page.getByRole('heading', { name: /load saved game type/i })).toBeVisible()
 
-    await page
-      .getByTestId('saved-game-types')
-      .locator('li')
-      .filter({ hasText: gameTypeName })
-      .getByRole('button', { name: /start game/i })
-      .click()
+    await selectSavedGameType(page, gameTypeName)
 
     await expect(page.getByTestId('load-saved-rosters-screen')).toBeVisible()
     await expect(page.getByTestId('rosters-list')).toContainText(rosterName)
 
-    await page
-      .getByTestId('rosters-list')
-      .locator('li')
-      .filter({ hasText: rosterName })
-      .getByRole('button', { name: /use for this game/i })
-      .click()
+    await selectSavedRoster(page, rosterName)
     await completeStrategySetup(page)
 
     await expect(page.getByTestId('game-roster-panel')).toContainText(rosterName)

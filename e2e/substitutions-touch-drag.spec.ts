@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
+import { selectSavedGameType } from './helpers/navigation'
 import { completeStrategySetup } from './helpers/strategySetup'
 
 async function createGameWithThreePlayers(page: Page, uniqueName: string) {
@@ -12,7 +13,7 @@ async function createGameWithThreePlayers(page: Page, uniqueName: string) {
   await page.getByLabel(/players on field/i).fill('2')
 
   await page.getByRole('button', { name: /save game type/i }).click()
-  await page.getByRole('button', { name: /^start game$/i }).click()
+  await selectSavedGameType(page, uniqueName)
 
   await page.getByTestId('roster-name-input').fill(`Roster ${uniqueName}`)
   await page.getByTestId('roster-save').click()
