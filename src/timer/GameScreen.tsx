@@ -3,6 +3,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type DragEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
@@ -764,7 +765,12 @@ export default function GameScreen({
       {roster ? (
         <div className="game-roster-panel" data-testid="game-roster-panel">
           <div className="game-roster-header">
-            <p className="game-screen-roster-title">{roster.name}</p>
+            <div className="game-roster-header-main">
+              <p className="game-screen-roster-title">{roster.name}</p>
+              <p className="game-roster-target" data-testid="game-target-playtime">
+                Target {formatClock(strategy.targetTime)} per player
+              </p>
+            </div>
             <div className="game-roster-header-actions">
               <button
                 type="button"
@@ -867,7 +873,7 @@ export default function GameScreen({
                         <div className="game-player-card-meter" aria-hidden>
                           <div
                             className="game-player-card-meter-fill"
-                            style={{ width: `${pct}%` }}
+                            style={{ '--meter-fill-width': `${pct}%` } as CSSProperties}
                           />
                         </div>
                       </li>
@@ -966,7 +972,7 @@ export default function GameScreen({
                         <div className="game-player-card-meter" aria-hidden>
                           <div
                             className="game-player-card-meter-fill"
-                            style={{ width: `${pct}%` }}
+                            style={{ '--meter-fill-width': `${pct}%` } as CSSProperties}
                           />
                         </div>
                       </li>
@@ -1024,6 +1030,10 @@ export default function GameScreen({
             <SubStrategyEditor
               config={subStrategyConfig}
               onConfigChange={onConfigChange}
+              timerConfig={gameType.config}
+              onFieldCount={gameType.onFieldCount}
+              rosterPlayerIds={rosterPlayerIds}
+              unavailableIds={unavailableIds}
               onBack={() => setIsEditingStrategy(false)}
               backLabel="Back to game"
             />

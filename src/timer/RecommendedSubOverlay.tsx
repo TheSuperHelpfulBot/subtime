@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type RefObject } from 'react'
+import { useLayoutEffect, useState, type CSSProperties, type RefObject } from 'react'
 import type { RecommendedSubPair } from './recommendedSubPairs'
 
 export type RecommendedSubOverlayProps = {
@@ -124,7 +124,7 @@ export default function RecommendedSubOverlay({
             className="game-recommended-sub-swap-btn"
             data-testid={index === 0 ? 'game-recommended-sub-swap' : `game-recommended-sub-swap-${index}`}
             aria-label="Swap recommended players"
-            style={{ top: y }}
+            style={{ '--swap-btn-top': `${y}px` } as CSSProperties}
             onClick={() => onSwap(pair.offId, pair.onId)}
           >
             <span className="game-recommended-sub-swap-icon" aria-hidden>
