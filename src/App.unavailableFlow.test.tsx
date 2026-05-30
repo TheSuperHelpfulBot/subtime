@@ -32,7 +32,7 @@ describe('App · unavailable roster flow', () => {
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: /get started/i }))
-    await user.click(screen.getByRole('button', { name: /^start game$/i }))
+    await user.click(screen.getByRole('button', { name: /^select$/i }))
 
     await user.click(screen.getByRole('button', { name: /edit saturday/i }))
     await user.click(screen.getByTestId(`roster-unavailable-${unavailablePlayerId}`))
