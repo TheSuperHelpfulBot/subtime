@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { selectSavedGameType } from './helpers/navigation'
 import { completeStrategySetup } from './helpers/strategySetup'
 
 test.describe('substitutions and playtime (Milestone 7)', () => {
@@ -16,7 +17,7 @@ test.describe('substitutions and playtime (Milestone 7)', () => {
     await page.getByRole('button', { name: /save game type/i }).click()
     await expect(page.getByRole('heading', { name: /load saved game type/i })).toBeVisible()
 
-    await page.getByRole('button', { name: /^start game$/i }).click()
+    await selectSavedGameType(page, uniqueName)
     await expect(page.getByTestId('set-up-roster-screen')).toBeVisible()
 
     await page.getByTestId('roster-name-input').fill(`Roster ${uniqueName}`)
@@ -56,7 +57,7 @@ test.describe('substitutions and playtime (Milestone 7)', () => {
     await page.getByLabel(/players on field/i).fill('2')
 
     await page.getByRole('button', { name: /save game type/i }).click()
-    await page.getByRole('button', { name: /^start game$/i }).click()
+    await selectSavedGameType(page, uniqueName)
 
     await page.getByTestId('roster-name-input').fill(`Roster ${uniqueName}`)
     await page.getByTestId('roster-save').click()
@@ -117,7 +118,7 @@ test.describe('substitutions and playtime (Milestone 7)', () => {
     await page.getByLabel(/players on field/i).fill('2')
 
     await page.getByRole('button', { name: /save game type/i }).click()
-    await page.getByRole('button', { name: /^start game$/i }).click()
+    await selectSavedGameType(page, uniqueName)
 
     await page.getByTestId('roster-name-input').fill(`Roster ${uniqueName}`)
     await page.getByTestId('roster-save').click()

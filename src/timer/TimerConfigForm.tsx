@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import SetupScreenPanel, { SetupScreenBody, SetupScreenHeader } from '../SetupScreen'
 import {
   DEFAULT_ON_FIELD_COUNT,
   saveGameType,
@@ -100,12 +101,16 @@ export default function TimerConfigForm({
     !valid || !config || !onFieldCountParsed.ok || gameTypeName.trim() === ''
 
   return (
-    <form className="timer-config" noValidate onSubmit={(e) => e.preventDefault()}>
-      <h2 className="timer-config-title">Set Up Game Type</h2>
-      <p className="timer-config-lead">
-        Name and set attributes for your game template. You can change this later.
-      </p>
+    <SetupScreenPanel className="timer-config">
+      <SetupScreenHeader>
+        <h2 className="screen-title">Set Up Game Type</h2>
+        <p className="screen-lead">
+          Name and set attributes for your game template. You can change this later.
+        </p>
+      </SetupScreenHeader>
 
+      <SetupScreenBody>
+        <form noValidate onSubmit={(e) => e.preventDefault()}>
       <div className="field">
         <label htmlFor="game-type-name">Game type name</label>
         <input
@@ -229,7 +234,7 @@ export default function TimerConfigForm({
       <div className="game-type-actions setup-save-actions">
         <button
           type="button"
-          className="btn-secondary"
+          className="cta"
           disabled={saveDisabled}
           onClick={handleSaveGameType}
         >
@@ -245,11 +250,13 @@ export default function TimerConfigForm({
 
       {onCancel ? (
         <div className="setup-cancel-wrap">
-          <button type="button" className="btn-text setup-back" onClick={onCancel}>
+          <button type="button" className="btn-secondary" onClick={onCancel}>
             Back
           </button>
         </div>
       ) : null}
-    </form>
+        </form>
+      </SetupScreenBody>
+    </SetupScreenPanel>
   )
 }

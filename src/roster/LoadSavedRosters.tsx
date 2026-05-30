@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import SetupScreenPanel, { SetupScreenBody, SetupScreenHeader } from '../SetupScreen'
 import type { GameTypeRecord } from '../storage/gameTypesStorage'
 import {
   getRosters,
@@ -69,16 +70,17 @@ export default function LoadSavedRosters({
   }
 
   return (
-    <div className="load-saved-rosters" data-testid="load-saved-rosters-screen">
-      <button type="button" className="btn-text roster-flow-back" onClick={onBack}>
-        Back to game types
-      </button>
+    <SetupScreenPanel className="load-saved-rosters" testId="load-saved-rosters-screen">
+      <SetupScreenHeader>
 
-      <h2 className="load-saved-title">Choose a roster</h2>
-      <p className="timer-config-lead">
-        Pick a squad for <strong>{gameType.name}</strong>, or create a new one.
-      </p>
 
+        <h2 className="screen-title">Choose a roster</h2>
+        <p className="screen-lead">
+          Pick a squad for <strong>{gameType.name}</strong>, or create a new one.
+        </p>
+      </SetupScreenHeader>
+
+      <SetupScreenBody>
       {view.kind === 'create' ? (
         <div className="roster-create-form">
           <div className="field">
@@ -122,18 +124,18 @@ export default function LoadSavedRosters({
                 <li key={r.id} className="roster-list-item" data-testid={`saved-roster-${r.id}`}>
                   <div className="roster-picker-row">
                     <span className="roster-list-name">{r.name}</span>
-                    <div className="roster-picker-actions">
+                    <div className="roster-picker-actions" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
                       <button
                         type="button"
                         className="cta roster-use-btn"
                         data-testid={`use-roster-${r.id}`}
                         onClick={() => onChooseRoster(r.id)}
                       >
-                        Use for this game
+                        Select
                       </button>
                       <button
                         type="button"
-                        className="btn-text"
+                        className="btn-secondary"
                         aria-label={`Edit ${r.name}`}
                         onClick={() => setView({ kind: 'edit', rosterId: r.id })}
                       >
@@ -151,6 +153,11 @@ export default function LoadSavedRosters({
           )}
         </>
       )}
-    </div>
+      <p></p>
+      <button type="button" className="btn-secondary" onClick={onBack}>
+        Back
+      </button>
+      </SetupScreenBody>
+    </SetupScreenPanel>
   )
 }

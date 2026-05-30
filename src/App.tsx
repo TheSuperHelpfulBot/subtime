@@ -134,8 +134,8 @@ export default function App() {
       setupIntent.kind === 'edit' ? setupIntent.gameType.onFieldCount : undefined
 
     return withAppChrome(
-      <main className="welcome">
-        <div className="welcome-inner timer-layout">
+      <main className="setup-screen">
+        <div className="setup-screen-inner timer-layout">
           <TimerConfigForm
             key={
               setupIntent.kind === 'edit'
@@ -172,11 +172,12 @@ export default function App() {
 
   if (phase === 'strategySetup' && activeGameType && activeRosterId) {
     return withAppChrome(
-      <main className="welcome">
-        <div className="welcome-inner timer-layout">
+      <main className="setup-screen">
+        <div className="setup-screen-inner timer-layout">
           <SubStrategySetup
             gameType={activeGameType}
             rosterId={activeRosterId}
+            unavailableIds={unavailablePlayerIds}
             onBack={backFromStrategySetup}
             onStartGame={startGameFromStrategy}
           />
@@ -187,8 +188,8 @@ export default function App() {
 
   if (phase === 'rosterPick' && pendingGameType) {
     return withAppChrome(
-      <main className="welcome">
-        <div className="welcome-inner timer-layout">
+      <main className="setup-screen">
+        <div className="setup-screen-inner timer-layout">
           <LoadSavedRosters
             gameType={pendingGameType}
             unavailableIds={unavailablePlayerIds}
@@ -203,8 +204,8 @@ export default function App() {
 
   if (phase === 'rosterSetup' && pendingGameType) {
     return withAppChrome(
-      <main className="welcome">
-        <div className="welcome-inner timer-layout">
+      <main className="setup-screen">
+        <div className="setup-screen-inner timer-layout">
           <SetUpRoster
             gameType={pendingGameType}
             unavailableIds={unavailablePlayerIds}
@@ -219,8 +220,8 @@ export default function App() {
 
   if (phase === 'loadSaved') {
     return withAppChrome(
-      <main className="welcome">
-        <div className="welcome-inner timer-layout">
+      <main className="setup-screen">
+        <div className="setup-screen-inner timer-layout">
           <LoadSavedGameTypes
             onCreateNew={openCreateNew}
             onEdit={openEdit}

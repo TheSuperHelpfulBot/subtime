@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import SetupScreenPanel, { SetupScreenBody, SetupScreenHeader } from '../SetupScreen'
 import {
   MAX_PLAYER_NAME_LENGTH,
   MAX_ROSTER_NAME_LENGTH,
@@ -194,13 +195,13 @@ export default function RosterEditor({
   }
 
   return (
-    <div className="roster-editor" data-testid="roster-editor">
-      <button type="button" className="btn-text roster-editor-back" data-testid="roster-editor-back" onClick={onBack}>
-        {backLabel}
-      </button>
+    <SetupScreenPanel className="roster-editor" testId="roster-editor">
+      <SetupScreenHeader>
+       
+        <h3 className="screen-title">Edit roster</h3>
+      </SetupScreenHeader>
 
-      <h3 className="roster-editor-title">Edit roster</h3>
-
+      <SetupScreenBody>
       <div className="field">
         <label htmlFor="roster-edit-name">Roster name</label>
         <input
@@ -217,7 +218,7 @@ export default function RosterEditor({
       <button type="button" className="btn-secondary roster-save-name" onClick={handleSaveRosterName}>
         Save name
       </button>
-
+      <button type="button" className="btn-secondary" onClick={onBack}>Back to roster list</button>
       <div className="roster-editor-players">
         <p className="roster-editor-section-label">Players</p>
         {onUnavailableChange ? (
@@ -356,7 +357,8 @@ export default function RosterEditor({
           </button>
         </div>
       ) : null}
-    </div>
+      </SetupScreenBody>
+    </SetupScreenPanel>
   )
 }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import SetupScreenPanel, { SetupScreenBody, SetupScreenHeader } from '../SetupScreen'
 import type { GameTypeRecord } from '../storage/gameTypesStorage'
 import { MAX_ROSTER_NAME_LENGTH, saveRoster } from '../storage/rosterStorage'
 import RosterEditor from './RosterEditor'
@@ -53,7 +54,11 @@ export default function SetUpRoster({
 
   return (
     <div className="set-up-roster" data-testid="set-up-roster-screen">
-      <button type="button" className="btn-text roster-flow-back" onClick={onBack}>
+      <button type="button" className="btn-secondary" onClick={onBack}>
+        Back to game types
+      </button>
+
+      <button type="button" className="btn-secondary" onClick={onBack}>
         Back to game types
       </button>
 

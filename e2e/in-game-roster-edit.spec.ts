@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
+import { selectSavedGameType } from './helpers/navigation'
 import { completeStrategySetup } from './helpers/strategySetup'
 
 async function createRunningGame(page: Page, uniqueName: string) {
@@ -12,7 +13,7 @@ async function createRunningGame(page: Page, uniqueName: string) {
   await page.getByLabel(/players on field/i).fill('2')
 
   await page.getByRole('button', { name: /save game type/i }).click()
-  await page.getByRole('button', { name: /^start game$/i }).click()
+  await selectSavedGameType(page, uniqueName)
 
   await page.getByTestId('roster-name-input').fill(`Roster ${uniqueName}`)
   await page.getByTestId('roster-save').click()
@@ -69,7 +70,7 @@ test.describe('in-game roster editing', () => {
     await editor.getByTestId('player-shirt-input').fill('4')
     await editor.getByTestId('add-player-submit').click()
 
-    await editor.getByTestId('roster-editor-back').click()
+    await editor.getByRole('button', { name: /back to roster list/i }).click()
 
     await expect(page.getByRole('dialog', { name: /edit roster/i })).toBeHidden()
     await expect(page.getByTestId('on-field-list')).toContainText('Avery')

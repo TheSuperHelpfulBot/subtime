@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import SetupScreenPanel, { SetupScreenBody, SetupScreenHeader } from '../SetupScreen'
 import {
   deleteGameType,
   getGameTypes,
@@ -28,17 +29,14 @@ export default function LoadSavedGameTypes({
   }
 
   return (
-    <div className="load-saved" data-testid="load-saved-screen">
-      <h2 className="load-saved-title">Load Saved Game Type</h2>
-      <p className="timer-config-lead">
-        Choose a saved setup or create a new game type.
-      </p>
+    <SetupScreenPanel className="load-saved" testId="load-saved-screen">
+      <SetupScreenHeader>
+        <h2 className="screen-title">Load Saved Game Type</h2>
+        <p className="screen-lead">Choose a saved setup or create a new game type.</p>
+      </SetupScreenHeader>
 
-      <button type="button" className="cta load-saved-create" onClick={onCreateNew}>
-        Create New Game Type
-      </button>
-
-      {items.length > 0 ? (
+      <SetupScreenBody>
+        {items.length > 0 ? (
         <ul
           className="game-types-list load-saved-list"
           data-testid="saved-game-types"
@@ -52,20 +50,20 @@ export default function LoadSavedGameTypes({
             >
               <div className="game-types-item-main">
                 <span className="game-types-item-name">{gt.name}</span>
-                <div className="game-types-item-actions">
+                <div className="game-types-item-actions" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.5rem' }}>
                   <button
                     type="button"
-                    className="btn-text"
+                    className="cta"
                     onClick={() => onStartGame(gt)}
                   >
-                    Start game
+                    Select
                   </button>
-                  <button type="button" className="btn-text" onClick={() => onEdit(gt)}>
+                  <button type="button" className="btn-secondary" onClick={() => onEdit(gt)}>
                     Edit
                   </button>
                   <button
                     type="button"
-                    className="btn-text danger"
+                    className="btn-secondary danger-outline"
                     onClick={() => handleDelete(gt.id)}
                   >
                     Delete
@@ -75,11 +73,17 @@ export default function LoadSavedGameTypes({
             </li>
           ))}
         </ul>
+      
       ) : (
         <p className="game-types-empty" data-testid="saved-game-types-empty">
           No saved game types yet.
         </p>
       )}
-    </div>
+      <p></p>
+      <button type="button" className="cta" onClick={onCreateNew}>
+        Create New Game Type
+      </button>
+      </SetupScreenBody>
+    </SetupScreenPanel>
   )
 }

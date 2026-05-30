@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { editSavedGameType } from './helpers/navigation'
 
 test.describe('game types · on-field player count', () => {
   test('create and edit persist on-field player count', async ({ page }) => {
@@ -20,7 +21,7 @@ test.describe('game types · on-field player count', () => {
     const row = page.getByTestId('saved-game-types').getByText(uniqueName, { exact: true })
     await expect(row).toBeVisible()
 
-    await page.getByRole('button', { name: /^edit$/i }).click()
+    await editSavedGameType(page, uniqueName)
 
     await expect(page.getByLabel(/players on field/i)).toHaveValue('7')
     await page.getByLabel(/players on field/i).fill('5')
@@ -31,7 +32,7 @@ test.describe('game types · on-field player count', () => {
     await page.reload()
     await page.getByRole('button', { name: /get started/i }).click()
 
-    await page.getByRole('button', { name: /^edit$/i }).click()
+    await editSavedGameType(page, uniqueName)
     await expect(page.getByLabel(/players on field/i)).toHaveValue('5')
   })
 })

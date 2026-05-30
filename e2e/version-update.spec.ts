@@ -9,7 +9,7 @@ test.describe('version and app updates', () => {
   test('top-left menu opens About with the deployed version identifier', async ({ page }) => {
     await page.goto('./')
 
-    const menuButton = page.getByRole('button', { name: /open app menu/i })
+    const menuButton = page.getByRole('button', { name: /^menu$/i })
     await expect(menuButton).toBeVisible()
 
     const box = await menuButton.boundingBox()
