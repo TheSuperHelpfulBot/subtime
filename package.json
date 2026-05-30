@@ -19,7 +19,8 @@
     "test:watch": "node scripts/check-node-version.mjs && vitest",
     "pretest:e2e": "node scripts/check-node-version.mjs && vite build",
     "test:e2e": "playwright test",
-    "test:e2e:ci": "playwright test"
+    "test:e2e:ci": "playwright test",
+    "test:e2e:headed": "bash scripts/run-e2e-headed.sh"
   },
   "dependencies": {
     "react": "^18.3.1",

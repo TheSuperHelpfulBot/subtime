@@ -47,7 +47,7 @@ describe('LoadSavedGameTypes', () => {
     await user.click(screen.getByRole('button', { name: /^create new game type$/i }))
     expect(onCreateNew).toHaveBeenCalledTimes(1)
 
-    await user.click(screen.getByRole('button', { name: /^start game$/i }))
+    await user.click(screen.getByRole('button', { name: /^select$/i }))
     expect(onStartGame).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole('button', { name: /^edit$/i }))
